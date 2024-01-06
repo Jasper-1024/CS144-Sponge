@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 nix = "0.20.0"
 socket2 = "0.4.2"
+rand = "0.8.4"
