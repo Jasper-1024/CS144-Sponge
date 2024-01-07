@@ -1,3 +1,10 @@
 {
-    "C_Cpp.errorSquiggles": "enabled"
+    "C_Cpp.errorSquiggles": "enabled",
+    "rust-analyzer.linkedProjects": [
+        "./lab1/Cargo.toml",
+        "./lab1/Cargo.toml"
+    ],
+    "cSpell.words": [
+        "Reassembler"
+    ]
 }
