@@ -54,3 +54,88 @@ fn test1() {
         );
     }
 }
+#[test]
+fn test3() {
+    let mut rng = thread_rng();
+
+    for _ in 0..NREPS {
+        let mut buf = StreamReassembler::new(65_000);
+
+        let size = 1024;
+        let mut d = vec![0u8; size];
+        rng.fill(&mut d[..]);
+
+        buf.push_substring(&d, 0, false);
+        buf.push_substring(&d[10..], size as u64 + 10, false);
+
+        let res1 = read(&buf);
+        assert_eq!(
+            buf.stream_out().borrow().bytes_written(),
+            size,
+            "test 3 - number of RX bytes is incorrect"
+        );
+        assert_eq!(
+            res1.as_slice(),
+            d.as_slice(),
+            "test 3 - content of RX bytes is incorrect"
+        );
+
+        buf.push_substring(&d[..7], size as u64, false);
+        buf.push_substring(&d[7..8], size as u64 + 7, true);
+
+        let res2 = read(&buf);
+        assert_eq!(
+            buf.stream_out().borrow().bytes_written(),
+            size + 8,
+            "test 3 - number of RX bytes is incorrect after 2nd read"
+        );
+        assert_eq!(
+            res2.as_slice(),
+            d[..8].to_vec().as_slice(),
+            "test 3 - content of RX bytes is incorrect after 2nd read"
+        ); // 这里和 c++ 测试不一样, c++ 中对应比较是 比较d中 与 res2 相同长度的部分, res2 没有的就终止了..
+           // rust 要求长度完全一致, 这里只能传入 d[..8].to_vec().as_slice()
+    }
+}
+
+#[test]
+fn test4() {
+    let mut rng = thread_rng();
+
+    for _ in 0..NREPS {
+        let mut buf = StreamReassembler::new(65_000);
+
+        let size = 1024;
+        let mut d = vec![0u8; size];
+        rng.fill(&mut d[..]);
+
+        buf.push_substring(&d, 0, false);
+        buf.push_substring(&d[10..], size as u64 + 10, false);
+
+        let res1 = read(&buf);
+        assert_eq!(
+            buf.stream_out().borrow().bytes_written(),
+            size,
+            "test 4 - number of RX bytes is incorrect"
+        );
+        assert_eq!(
+            res1.as_slice(),
+            d.as_slice(),
+            "test 4 - content of RX bytes is incorrect"
+        );
+
+        buf.push_substring(&d[..15], size as u64, true);
+
+        let res2 = read(&buf);
+        let bytes_written = buf.stream_out().borrow().bytes_written();
+        assert!(
+            bytes_written == 2 * size || bytes_written == size + 15,
+            "test 4 - number of RX bytes is incorrect after 2nd read"
+        );
+        assert_eq!(
+            res2.as_slice(),
+            d.as_slice(),
+            "test 4 - content of RX bytes is incorrect after 2nd read"
+        );
+    }
+}

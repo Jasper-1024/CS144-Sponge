@@ -33,6 +33,9 @@ impl<'a> StreamReassemblerTrait<'a> for StreamReassembler<'a> {
         }
     }
     fn push_substring(&mut self, mut data: &'a [u8], mut index: u64, eof: bool) {
+        if data.len() == 0 {
+            return; // data 为空
+        };
         if index >= (self.assembled + self.capacity as u64) {
             return; // data.start 在 capacity 之后
         }
@@ -75,8 +78,8 @@ impl<'a> StreamReassemblerTrait<'a> for StreamReassembler<'a> {
             if *next_index > (index + data.len() as u64) {
                 return;
             }
+            data = &data[(*next_index - index) as usize..]; // 更新 data | 索引从 0 开始
             index = *next_index; // 更新 index
-            data = &data[(*next_index - index - 1) as usize..]; // 更新 data | 索引从 0 开始
         }
 
         let mut next_key = index + data.len() as u64;
