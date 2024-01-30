@@ -5,7 +5,7 @@ use std::result;
 
 use rand::rngs::ThreadRng;
 use std::fmt::Write;
-use std::io::{self, Write as IOWrite};
+use std::io::Write as IOWrite;
 use std::net::Ipv4Addr;
 use std::time::{Duration, Instant};
 
@@ -78,11 +78,10 @@ impl Error for UnixError {
 
 /// 处理 SystemCall 返回值, 查看系统调用错误信息
 fn system_call(attempt: &str, return_value: i32, errno_mask: i32) -> Result<()> {
-
     if return_value >= 0 || io::Error::last_os_error().raw_os_error() == Some(errno_mask) {
-        Ok(return_value)
+        Ok(())
     } else {
-        UnixError(io::Error::last_os_error(), attempt)
+        Err(Box::new(UnixError::new(attempt))) // need to check again
     }
 }
 
@@ -105,8 +104,8 @@ struct InternetChecksum {
     parity: bool,
 }
 // ip 头部校验和 | tcp udp 校验和
-//! For more information, see the [Wikipedia page](https://en.wikipedia.org/wiki/IPv4_header_checksum)
-//! on the Internet checksum, and consult the [IP](\ref rfc::rfc791) and [TCP](\ref rfc::rfc793) RFCs.
+///! For more information, see the [Wikipedia page](https://en.wikipedia.org/wiki/IPv4_header_checksum)
+///! on the Internet checksum, and consult the [IP](\ref rfc::rfc791) and [TCP](\ref rfc::rfc793) RFCs.
 impl InternetChecksum {
     fn new(initial_sum: u32) -> Self {
         InternetChecksum {
@@ -152,7 +151,11 @@ fn hexdump(data: &[u8], indent: usize) {
             print!(" ");
         }
         print!("{:02x}", byte);
-        pchars.push(if byte.is_ascii_graphic() { byte as char } else { '.' });
+        pchars.push(if byte.is_ascii_graphic() {
+            byte as char
+        } else {
+            '.'
+        });
         printed += 1;
     }
     let print_rem = (16 - (printed % 16)) % 16;
