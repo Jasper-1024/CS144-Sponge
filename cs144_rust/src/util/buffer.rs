@@ -1,38 +1,66 @@
-use std::io::IoSlice;
-use std::sync::Arc;
+use std::{io::IoSlice, rc::Rc};
 
 // 引用计数的只读字符串
 #[derive(Clone)]
 pub struct Buffer {
-    storage: Arc<String>, // 跨线程共享 String
+    storage: Rc<String>, // cs144 是单线程
     starting_offset: usize,
 }
 
 impl Buffer {
-    fn new(data: String) -> Self {
+    pub fn new(data: String) -> Self {
         Buffer {
-            storage: Arc::new(data),
+            storage: Rc::new(data),
             starting_offset: 0,
         }
     }
 
-    fn len(&self) -> usize {
-        self.storage.len() - self.starting_offset
+    /**
+     * 返回字符串的切片, 如果 data 为空, 则返回一个空字符串的引用,不为空返回从 offset 到结尾
+     */
+    pub fn as_str(&self) -> &str {
+        if self.storage.is_empty() {
+            ""
+        } else {
+            &self.storage[self.starting_offset..]
+        }
     }
 
-    fn is_empty(&self) -> bool {
-        self.len() == 0
+    /**
+     * 取 i 位置的字节(与 offset 无关), 有可能越过边界
+     */
+    pub fn at(&self, i: usize) -> Option<u8> {
+        let bytes = self.storage.as_bytes();
+        if self.starting_offset + i < bytes.len() {
+            Some(bytes[i])
+        } else {
+            None
+        }
     }
 
-    fn as_str(&self) -> &str {
-        &self.storage[self.starting_offset..]
+    pub fn size(&self) -> usize {
+        self.storage.len()
     }
 
-    fn remove_prefix(&mut self, n: usize) {
-        if n > self.len() {
+    pub fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+
+    pub fn remove_prefix(&mut self, n: usize) {
+        if n > self.size() {
             panic!("Buffer::remove_prefix out of bounds");
         }
         self.starting_offset += n;
+        // 如果 storage 为空, 且 starting_offset 等于 size, 则将 storage 设置为一个空字符串
+        if self.storage.is_empty() && (self.starting_offset == self.size()) {
+            self.storage = Rc::new("".to_string());
+        }
+    }
+}
+
+impl Into<&str> for Buffer {
+    fn into(self) -> &'static str {
+        self.as_str()
     }
 }
 
