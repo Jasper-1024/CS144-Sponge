@@ -132,12 +132,12 @@ pub struct BufferViewList<'a> {
 }
 
 impl<'a> BufferViewList<'a> {
-    fn new(buffers: &'a BufferList) -> Self {
+    pub fn new(buffers: &'a BufferList) -> Self {
         let views = buffers.buffers.iter().map(|b| b.as_str()).collect();
         BufferViewList { views }
     }
 
-    fn new_str(s: &'a str) -> Self {
+    pub fn new_str(s: &'a str) -> Self {
         let mut views = VecDeque::new();
         views.push_back(s);
         BufferViewList { views }
@@ -145,21 +145,21 @@ impl<'a> BufferViewList<'a> {
     /**
      * 所有权限制,只能传入 String 的引用
      */
-    fn new_string(s: &'a String) -> Self {
+    pub fn new_string(s: &'a String) -> Self {
         let mut views = VecDeque::new();
         views.push_back(s.as_str());
         BufferViewList { views }
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.views.iter().map(|v| v.len()).sum()
     }
 
-    fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.views.iter().all(|v| v.is_empty())
     }
 
-    fn remove_prefix(&mut self, mut n: usize) -> Result<(), &'static str> {
+    pub fn remove_prefix(&mut self, mut n: usize) -> Result<(), &'static str> {
         while n > 0 {
             if let Some(first) = self.views.front_mut() {
                 if n < first.len() {
@@ -177,7 +177,7 @@ impl<'a> BufferViewList<'a> {
         Ok(())
     }
 
-    fn as_io_slices(&self) -> Vec<IoSlice> {
+    pub fn as_io_slices(&self) -> Vec<IoSlice> {
         self.views
             .iter()
             .map(|&v| IoSlice::new(v.as_bytes()))
