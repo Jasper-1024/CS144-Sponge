@@ -47,13 +47,13 @@ impl Error for TaggedError {
 
 // syscalls 的错误类型
 #[derive(Debug)]
-struct UnixError {
+pub(crate) struct UnixError {
     tagged_error: TaggedError,
 }
 
 impl UnixError {
     // 创建新的 UnixError 实例
-    fn new(attempt: &str) -> Self {
+    pub(crate) fn new(attempt: &str) -> Self {
         UnixError {
             tagged_error: TaggedError::new(attempt, io::Error::last_os_error()),
         }
