@@ -1,71 +1,61 @@
 use super::file_descriptor::FileDescriptor;
-use nix::fcntl::open;
-use nix::fcntl::OFlag;
-use nix::ioctl_write_ptr;
-use nix::sys::stat::Mode;
+use nix::fcntl::{self, OFlag};
+use nix::ioctl_write_int;
+use nix::sys::stat;
+use nix::unistd::close;
 use std::ffi::CString;
-use std::io::{self, Error, ErrorKind, Result};
-use std::os::fd;
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::ptr;
+use std::os::unix::io::AsRawFd;
 
-const TUNSETIFF: u64 = 0x400454ca;
-const CLONEDEV: &str = "/dev/net/tun";
-
-ioctl_write_ptr!(tunsetiff, 'T' as u8, 202, libc::ifreq);
-
-// Ifreq结构用于ioctl设置TUN设备名称
-#[repr(C)]
-#[derive(Debug)]
-pub struct Ifreq {
-    ifr_name: [u8; 16], // 设备名，例如 tun0
-    ifr_flags: i16,     // IFF_TUN 或 IFF_TAP，以及其他可选标志
-}
-
+ioctl_write_int!(ioctl_tun_set_iff, b'T', 202);
 struct TunTapFD {
     fd: FileDescriptor,
-    is_tun: bool,
 }
 
 impl TunTapFD {
-    fn new(devname: &str, is_tun: bool) -> Result<Self> {
-        let fd: i32 = open(CLONEDEV, OFlag::O_RDWR, Mode::empty()).map_err(|e| {
-            Error::new(
-                ErrorKind::NotFound,
-                format!("Failed to open /dev/net/tun: {}", e),
-            )
-        })?;
+    // ref: https://gist.github.com/harrisonturton/f7c8bc2c0396bae08999563840bdf964
+    pub fn new(devname: &str, is_tun: bool) -> Result<Self, String> {
+        fn to_u64_ptr<T>(val: &T) -> u64 {
+            val as *const T as u64
+        }
+        if devname.is_empty() {
+            return Err("Device name must not be empty".to_string());
+        }
+        // Open the clone device with read/write flags
+        let fd = fcntl::open("/dev/net/tun", OFlag::O_RDWR, stat::Mode::empty())
+            .map_err(|err| format!("Failed to open file with errno {}", err))?;
 
+        // Initialize the ifreq structure for ioctl
         let mut ifr = libc::ifreq {
-            ifr_ifru: unsafe { std::mem::zeroed() },
+            ifr_ifru: unsafe { std::mem::zeroed() }, // all set to 0
             ifr_name: [0; libc::IFNAMSIZ],
         };
-        let devname = CString::new(devname)
-            .map_err(|_| Error::new(ErrorKind::InvalidInput, "Invalid interface name"))?;
-        unsafe {
-            ptr::copy_nonoverlapping(
-                devname.as_ptr(),
-                ifr.ifr_name.as_mut_ptr(),
-                devname.to_bytes().len(),
-            );
-        }
 
-        // Setting flag for TUN or TAP
+        // Set the flags for TUN or TAP device
         ifr.ifr_ifru.ifru_flags = if is_tun {
-            (libc::IFF_TUN | libc::IFF_NO_PI).try_into().unwrap()
+            (libc::IFF_TUN | libc::IFF_NO_PI) as i16
         } else {
-            (libc::IFF_TAP | libc::IFF_NO_PI).try_into().unwrap()
+            (libc::IFF_TAP | libc::IFF_NO_PI) as i16
         };
 
+        // Copy the device name into ifr_name and ensure it's null-terminated
+        let cstring_devname = CString::new(devname).expect("CString::new failed");
+        if cstring_devname.as_bytes().len() >= libc::IFNAMSIZ {
+            panic!("Device name too long");
+        }
+        for (i, &byte) in cstring_devname.as_bytes_with_nul().iter().enumerate() {
+            ifr.ifr_name[i] = byte as i8;
+        }
+
+        // Perform the ioctl to create and configure the TUN/TAP device
         unsafe {
-            tunsetiff(fd, &ifr as *const _ as *mut _).map_err(|e| {
-                Error::new(ErrorKind::Other, format!("Failed to set TUNSETIFF: {}", e))
-            })?;
+            if let Err(err) = ioctl_tun_set_iff(fd, to_u64_ptr(&ifr)) {
+                let _ = close(fd).map_err(|err| format!("Failed to close file with errno {}", err));
+                return Err(err.to_string());
+            }
         }
 
         Ok(TunTapFD {
-            fd: FileDescriptor::new(fd).unwrap(),
-            is_tun,
+            fd: FileDescriptor::new(fd.as_raw_fd()).unwrap(),
         })
     }
 }
@@ -75,8 +65,9 @@ struct TunFD {
 }
 
 impl TunFD {
-    fn new(devname: &str) -> Result<Self> {
-        TunTapFD::new(devname, true).map(|fd| TunFD { fd })
+    fn new(devname: &str) -> Result<Self, String> {
+        print!("{}", devname);
+        Ok(TunTapFD::new(devname, true).map(|fd| TunFD { fd })?)
     }
 }
 
@@ -85,7 +76,34 @@ struct TapFD {
 }
 
 impl TapFD {
-    fn new(devname: &str) -> Result<Self> {
-        TunTapFD::new(devname, false).map(|fd| TapFD { fd })
+    fn new(devname: &str) -> Result<Self, String> {
+        Ok(TunTapFD::new(devname, false).map(|fd| TapFD { fd })?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tun_fd_new() {
+        let tun_fd = TunFD::new("tun0");
+        assert!(tun_fd.is_ok(), "Failed to create TunFD");
+    }
+
+    #[test]
+    fn test_tap_fd_new() {
+        let tap_fd = TapFD::new("tap0");
+        assert!(tap_fd.is_ok(), "Failed to create TapFD");
+    }
+
+    #[test]
+    fn test_invalid_devname() {
+        let tun_fd = TunFD::new("");
+        print!("{}", tun_fd.is_err());
+        assert!(tun_fd.is_err(), "Created TunFD with invalid devname");
+
+        let tap_fd = TapFD::new("");
+        assert!(tap_fd.is_err(), "Created TapFD with invalid devname");
     }
 }
