@@ -1,7 +1,7 @@
 use std::{collections::VecDeque, io::IoSlice, rc::Rc};
 
 // 引用计数的只读字符串
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Buffer {
     storage: Rc<String>, // cs144 是单线程
     starting_offset: usize,
@@ -44,12 +44,14 @@ impl Buffer {
 
     pub fn remove_prefix(&mut self, n: usize) -> Result<(), &'static str> {
         if n > self.len() {
-            return Err("Buffer::remove_prefix out of bounds");
+            return Err("Buffer::remove_prefix n too large");
         }
         self.starting_offset += n;
         // 如果 storage 为空, 且 starting_offset 等于 size, 则将 storage 设置为一个空字符串
-        if self.storage.is_empty() && (self.starting_offset == self.len()) {
+        if self.storage.is_empty() && (self.starting_offset >= self.len()) {
             self.storage = Rc::new("".to_string());
+            self.starting_offset = 0;
+            return Err("Buffer::remove_prefix out of bounds, reset storage to empty string");
         }
         Ok(())
     }
