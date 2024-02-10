@@ -82,48 +82,23 @@ impl NetParser {
     }
 }
 
-// impl NetParser {
-//     pub fn new(buffer: Buffer) -> Self {
-//         NetParser {
-//             buffer: Arc::new(buffer),
-//             error: None,
-//         }
-//     }
+pub struct NetUnparser;
 
-//     pub fn check_size(&mut self, size: usize) {
-//         if self.buffer.len() < size {
-//             self.error = Some(ParseResult::PacketTooShort);
-//         }
-//     }
+impl NetUnparser {
+    pub fn u32(str: &str) -> u32 {
+        let num = str.parse::<u32>().unwrap();
+        num.to_be()
+    }
 
-//     pub fn parse_int<T>(&mut self) -> Option<T>
-//     where
-//         T: std::convert::TryFrom<u128> + std::marker::Sized,
-//     {
-//         self.check_size(std::mem::size_of::<T>());
-//         if self.error.is_some() {
-//             return None;
-//         }
+    pub fn u16(str: &str) -> u16 {
+        let num = str.parse::<u16>().unwrap();
+        num.to_be()
+    }
 
-//         let mut val: u128 = 0;
-//         for _ in 0..std::mem::size_of::<T>() {
-//             if let Some(byte) = self.buffer.as_bytes().get(0) {
-//                 // Assuming Buffer has as_bytes method
-//                 val = (val << 8) | (*byte as u128);
-//                 self.buffer.remove_prefix(1); // Assuming Buffer has remove_prefix method
-//             }
-//         }
-//         T::try_from(val).ok()
-//     }
-
-//     pub fn remove_prefix(&mut self, n: usize) {
-//         self.buffer.remove_prefix(n);
-//     }
-
-//     // Additional methods for parsing specific network protocol fields...
-// }
-
-// Unparser would be similarly implemented, using BufferList for constructing messages
+    pub fn u8(str: &str) -> u8 {
+        str.parse::<u8>().unwrap()
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -173,5 +148,43 @@ mod tests {
         let len1 = parser.buffer.len();
         assert_eq!(parser.u8().unwrap(), 0x01);
         assert_eq!(parser.buffer.len(), len1 - 1);
+    }
+
+    // Unparser
+
+    #[test]
+    fn test_unparser_u32() {
+        assert_eq!(NetUnparser::u32("1234567890"), 1234567890u32.to_be());
+        assert_eq!(NetUnparser::u32("4294967295"), 4294967295u32.to_be());
+    }
+
+    #[test]
+    fn test_unparser_u16() {
+        assert_eq!(NetUnparser::u16("12345"), 12345u16.to_be());
+        assert_eq!(NetUnparser::u16("65535"), 65535u16.to_be());
+    }
+
+    #[test]
+    fn test_unparser_u8() {
+        assert_eq!(NetUnparser::u8("123"), 123u8);
+        assert_eq!(NetUnparser::u8("255"), 255u8);
+    }
+
+    #[test]
+    #[should_panic(expected = "ParseIntError")]
+    fn test_unparser_u32_fail() {
+        NetUnparser::u32("4294967296"); // 大于 u32 最大值
+    }
+
+    #[test]
+    #[should_panic(expected = "ParseIntError")]
+    fn test_unparser_u16_fail() {
+        NetUnparser::u16("65536"); // 大于 u16 最大值
+    }
+
+    #[test]
+    #[should_panic(expected = "ParseIntError")]
+    fn test_unparser_u8_fail() {
+        NetUnparser::u8("256"); // 大于 u8 最大值
     }
 }
