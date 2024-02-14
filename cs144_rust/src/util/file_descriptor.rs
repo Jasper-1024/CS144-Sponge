@@ -51,6 +51,7 @@ impl Drop for FDWrapper {
 }
 
 // 共享FDWrapper，提供读写功能
+#[derive(Clone)]
 pub(crate) struct FileDescriptor {
     internal_fd: Rc<RefCell<FDWrapper>>, // 单线程内部可变
 }
@@ -61,6 +62,10 @@ impl FileDescriptor {
         Ok(Self {
             internal_fd: Rc::new(RefCell::new(fd_wrapper)),
         })
+    }
+
+    pub fn fd_num(&self) -> RawFd {
+        self.internal_fd.borrow().fd
     }
 
     pub fn read(&self, mut limit: usize) -> io::Result<Vec<u8>> {
