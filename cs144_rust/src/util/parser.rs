@@ -37,8 +37,7 @@ impl From<&'static str> for ParseError {
 macro_rules! parse_num {
     ($self:ident, $t:ty, $size:expr) => {{
         $self.check_size($size)?;
-        let bytes: [u8; $size] = $self.buffer.as_str()[..$size]
-            .as_bytes()
+        let bytes: [u8; $size] = $self.buffer.as_slice().unwrap_or_default()[..$size]
             .try_into()
             .unwrap();
         let _ = $self.remove_prefix($size);
@@ -106,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let buffer = Buffer::new("test".to_owned());
+        let buffer = Buffer::new(*b"test");
         let parser = NetParser::new(buffer.clone());
 
         assert_eq!(parser.buffer, buffer);
@@ -114,20 +113,20 @@ mod tests {
 
     #[test]
     fn test_remove_prefix() {
-        let mut parser = NetParser::new(Buffer::new("test".to_owned()));
+        let mut parser = NetParser::new(Buffer::new(*b"test"));
 
         assert!(parser.remove_prefix(2).is_ok());
-        assert_eq!(parser.buffer.as_str(), "st");
+        assert_eq!(parser.buffer.as_slice(), Some("st".as_bytes()));
 
         assert!(parser.remove_prefix(2).is_ok());
-        assert_eq!(parser.buffer.as_str(), "");
+        assert_eq!(parser.buffer.as_slice(), Some("".as_bytes()));
 
         assert!(parser.remove_prefix(1).is_err());
     }
 
     #[test]
     fn test_u32() {
-        let mut parser = NetParser::new(Buffer::new("\x01\x02\x03\x04".to_owned()));
+        let mut parser = NetParser::new(Buffer::new(*b"\x01\x02\x03\x04"));
 
         let len1 = parser.buffer.len();
         assert_eq!(parser.u32().unwrap(), 0x01020304);
@@ -136,7 +135,7 @@ mod tests {
 
     #[test]
     fn test_u16() {
-        let mut parser = NetParser::new(Buffer::new("\x01\x02".to_owned()));
+        let mut parser = NetParser::new(Buffer::new(*b"\x01\x02"));
         let len1 = parser.buffer.len();
         assert_eq!(parser.u16().unwrap(), 0x0102);
         assert_eq!(parser.buffer.len(), len1 - 2);
@@ -144,13 +143,13 @@ mod tests {
 
     #[test]
     fn test_u8() {
-        let mut parser = NetParser::new(Buffer::new("\x01".to_owned()));
+        let mut parser = NetParser::new(Buffer::new(*b"\x01"));
         let len1 = parser.buffer.len();
         assert_eq!(parser.u8().unwrap(), 0x01);
         assert_eq!(parser.buffer.len(), len1 - 1);
     }
 
-    // Unparser
+    /// Unparser
 
     #[test]
     fn test_unparser_u32() {
