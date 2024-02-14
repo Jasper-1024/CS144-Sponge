@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, LowerHex, Octal};
 use std::ops::{Add, Sub};
 
 /// A 32-bit integer, expressed relative to an arbitrary initial sequence number (ISN)
@@ -42,6 +42,18 @@ impl WrappingInt32 {
 impl fmt::Display for WrappingInt32 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl Octal for WrappingInt32 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:o}", self.0)
+    }
+}
+
+impl LowerHex for WrappingInt32 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:x}", self.0)
     }
 }
 
