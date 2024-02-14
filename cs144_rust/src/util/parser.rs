@@ -1,3 +1,5 @@
+use std::vec;
+
 use super::buffer::Buffer;
 
 #[derive(thiserror::Error, Debug)]
@@ -84,18 +86,16 @@ impl NetParser {
 pub struct NetUnparser;
 
 impl NetUnparser {
-    pub fn u32(str: &str) -> u32 {
-        let num = str.parse::<u32>().unwrap();
-        num.to_be()
+    pub fn u32(buffer: &mut Vec<u8>, num: u32) {
+        buffer.extend_from_slice(&num.to_be_bytes());
     }
 
-    pub fn u16(str: &str) -> u16 {
-        let num = str.parse::<u16>().unwrap();
-        num.to_be()
+    pub fn u16(buffer: &mut Vec<u8>, num: u16) {
+        buffer.extend_from_slice(&num.to_be_bytes());
     }
 
-    pub fn u8(str: &str) -> u8 {
-        str.parse::<u8>().unwrap()
+    pub fn u8(buffer: &mut Vec<u8>, num: u8) {
+        buffer.push(num);
     }
 }
 
@@ -149,41 +149,48 @@ mod tests {
         assert_eq!(parser.buffer.len(), len1 - 1);
     }
 
-    /// Unparser
-
     #[test]
     fn test_unparser_u32() {
-        assert_eq!(NetUnparser::u32("1234567890"), 1234567890u32.to_be());
-        assert_eq!(NetUnparser::u32("4294967295"), 4294967295u32.to_be());
+        let mut buffer = Vec::new();
+        NetUnparser::u32(&mut buffer, 0x01020304);
+        assert_eq!(buffer, vec![0x01, 0x02, 0x03, 0x04]);
+
+        buffer.clear();
+        NetUnparser::u32(&mut buffer, u32::MAX);
+        assert_eq!(buffer, vec![0xFF, 0xFF, 0xFF, 0xFF]);
+
+        buffer.clear();
+        NetUnparser::u32(&mut buffer, u32::MIN);
+        assert_eq!(buffer, vec![0x00, 0x00, 0x00, 0x00]);
     }
 
     #[test]
     fn test_unparser_u16() {
-        assert_eq!(NetUnparser::u16("12345"), 12345u16.to_be());
-        assert_eq!(NetUnparser::u16("65535"), 65535u16.to_be());
+        let mut buffer = Vec::new();
+        NetUnparser::u16(&mut buffer, 0x0102);
+        assert_eq!(buffer, vec![0x01, 0x02]);
+
+        buffer.clear();
+        NetUnparser::u16(&mut buffer, u16::MAX);
+        assert_eq!(buffer, vec![0xFF, 0xFF]);
+
+        buffer.clear();
+        NetUnparser::u16(&mut buffer, u16::MIN);
+        assert_eq!(buffer, vec![0x00, 0x00]);
     }
 
     #[test]
     fn test_unparser_u8() {
-        assert_eq!(NetUnparser::u8("123"), 123u8);
-        assert_eq!(NetUnparser::u8("255"), 255u8);
-    }
+        let mut buffer = Vec::new();
+        NetUnparser::u8(&mut buffer, 0x01);
+        assert_eq!(buffer, vec![0x01]);
 
-    #[test]
-    #[should_panic(expected = "ParseIntError")]
-    fn test_unparser_u32_fail() {
-        NetUnparser::u32("4294967296"); // 大于 u32 最大值
-    }
+        buffer.clear();
+        NetUnparser::u8(&mut buffer, u8::MAX);
+        assert_eq!(buffer, vec![0xFF]);
 
-    #[test]
-    #[should_panic(expected = "ParseIntError")]
-    fn test_unparser_u16_fail() {
-        NetUnparser::u16("65536"); // 大于 u16 最大值
-    }
-
-    #[test]
-    #[should_panic(expected = "ParseIntError")]
-    fn test_unparser_u8_fail() {
-        NetUnparser::u8("256"); // 大于 u8 最大值
+        buffer.clear();
+        NetUnparser::u8(&mut buffer, u8::MIN);
+        assert_eq!(buffer, vec![0x00]);
     }
 }
