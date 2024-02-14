@@ -1,28 +1,28 @@
 use std::{collections::VecDeque, io::IoSlice, rc::Rc};
 
-// 引用计数的只读字符串
+// 引用计数的 只读 u8 数组
 #[derive(Clone, Debug, PartialEq)]
 pub struct Buffer {
-    storage: Rc<String>, // cs144 是单线程
+    storage: Rc<[u8]>, // cs144 是单线程
     starting_offset: usize,
 }
 
 impl Buffer {
-    pub fn new(data: String) -> Self {
+    pub fn new<const N: usize>(data: [u8; N]) -> Self {
         Buffer {
-            storage: Rc::new(data),
+            storage: Rc::from(data),
             starting_offset: 0,
         }
     }
 
     /**
-     * 返回字符串的切片, 如果 data 为空, 则返回一个空字符串的引用,不为空返回从 offset 到结尾
+     * 返回u8切片, 有可能为空
      */
-    pub fn as_str(&self) -> &str {
+    pub fn as_slice(&self) -> Option<&[u8]> {
         if self.storage.is_empty() {
-            ""
+            None
         } else {
-            &self.storage[self.starting_offset..]
+            Some(&self.storage[self.starting_offset..])
         }
     }
 
@@ -30,7 +30,7 @@ impl Buffer {
      * 取 i 位置的字节(与 offset 无关), 有可能越过边界
      */
     pub fn at(&self, i: usize) -> Option<u8> {
-        let bytes = self.storage.as_bytes();
+        let bytes = self.storage.as_ref();
         if self.starting_offset + i < bytes.len() {
             Some(bytes[i])
         } else {
@@ -38,10 +38,16 @@ impl Buffer {
         }
     }
 
+    /**
+     * 返回 u8 数组 len, 无效返回 0
+     */
     pub fn len(&self) -> usize {
-        self.as_str().len()
+        self.as_slice().map_or(0, |slice| slice.len())
     }
 
+    /**
+     * remove prefix from the front of the buffer
+     */
     pub fn remove_prefix(&mut self, n: usize) -> Result<(), &'static str> {
         if n > self.len() {
             return Err("Buffer::remove_prefix n too large");
@@ -49,7 +55,7 @@ impl Buffer {
         self.starting_offset += n;
         // 如果 storage 为空, 且 starting_offset 等于 size, 则将 storage 设置为一个空字符串
         if self.storage.is_empty() && (self.starting_offset >= self.len()) {
-            self.storage = Rc::new("".to_string());
+            self.storage = Rc::from(Vec::new());
             self.starting_offset = 0;
             return Err("Buffer::remove_prefix out of bounds, reset storage to empty string");
         }
@@ -57,10 +63,10 @@ impl Buffer {
     }
 }
 
-// as_ref 方法返回一个字符串的引用
-impl AsRef<str> for Buffer {
-    fn as_ref(&self) -> &str {
-        self.as_str()
+// as_ref 方法返回一个 u8 数组的引用
+impl AsRef<[u8]> for Buffer {
+    fn as_ref(&self) -> &[u8] {
+        self.as_slice().unwrap_or_default()
     }
 }
 
@@ -119,39 +125,52 @@ impl BufferList {
         Ok(())
     }
 
-    fn concatenate(&self) -> String {
-        let mut result = String::with_capacity(self.len());
+    /**
+     * make a copy of all buffers
+     */
+    fn concatenate<const N: usize>(&self) -> [u8; N] {
+        let mut result = Vec::new();
         for buffer in &self.buffers {
-            result.push_str(buffer.as_str());
+            result.extend_from_slice(buffer.as_ref());
         }
-        result
+        result.try_into().unwrap()
     }
 }
 
 // A non-owning temporary view of a discontiguous string
 pub struct BufferViewList<'a> {
-    views: VecDeque<&'a str>,
+    views: VecDeque<&'a [u8]>,
 }
 
 impl<'a> BufferViewList<'a> {
+    /**
+     * new BufferViewList from BufferList
+     */
     pub fn new(buffers: &'a BufferList) -> Self {
-        let views = buffers.buffers.iter().map(|b| b.as_str()).collect();
+        let views = buffers
+            .buffers
+            .iter()
+            .map(|b| b.as_slice().unwrap_or_default())
+            .collect();
         BufferViewList { views }
     }
 
-    pub fn new_str(s: &'a str) -> Self {
+    /**
+     * new BufferViewList from &[u8]
+     */
+    pub fn new_frome_slice(s: &'a [u8]) -> Self {
         let mut views = VecDeque::new();
         views.push_back(s);
         BufferViewList { views }
     }
     /**
-     * 所有权限制,只能传入 String 的引用
+     * new BufferViewList from [u8; N] , not work for lifetime
      */
-    pub fn new_string(s: &'a String) -> Self {
-        let mut views = VecDeque::new();
-        views.push_back(s.as_str());
-        BufferViewList { views }
-    }
+    // pub fn new_form_list<const N: usize>(s: [u8; N]) -> Self {
+    //     let mut views = VecDeque::new();
+    //     views.push_back(&s as &[u8]);
+    //     BufferViewList { views }
+    // }
 
     pub fn len(&self) -> usize {
         self.views.iter().map(|v| v.len()).sum()
@@ -161,6 +180,9 @@ impl<'a> BufferViewList<'a> {
         self.views.iter().all(|v| v.is_empty())
     }
 
+    /**
+     * remove prefix from the front of the buffer list
+     */
     pub fn remove_prefix(&mut self, mut n: usize) -> Result<(), &'static str> {
         while n > 0 {
             if let Some(first) = self.views.front_mut() {
@@ -180,10 +202,7 @@ impl<'a> BufferViewList<'a> {
     }
 
     pub fn as_io_slices(&self) -> Vec<IoSlice> {
-        self.views
-            .iter()
-            .map(|&v| IoSlice::new(v.as_bytes()))
-            .collect()
+        self.views.iter().map(|&v| IoSlice::new(v)).collect()
     }
 }
 
@@ -193,186 +212,160 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let buffer = Buffer::new("Hello, world!".to_string());
-        assert_eq!(buffer.as_str(), "Hello, world!");
+        let buffer = Buffer::new([1, 2, 3, 4, 5]);
+        assert_eq!(buffer.storage.len(), 5);
+        assert_eq!(buffer.starting_offset, 0);
     }
 
     #[test]
-    fn test_as_str() {
-        let buffer = Buffer::new("Hello, world!".to_string());
-        assert_eq!(buffer.as_str(), "Hello, world!");
+    fn test_as_slice() {
+        let buffer = Buffer::new([1, 2, 3, 4, 5]);
+        assert_eq!(buffer.as_slice(), Some(&[1, 2, 3, 4, 5][..]));
     }
 
     #[test]
     fn test_at() {
-        let buffer = Buffer::new("Hello, world!".to_string());
-        assert_eq!(buffer.at(0), Some(b'H'));
-        assert_eq!(buffer.at(12), Some(b'!'));
-        assert_eq!(buffer.at(13), None);
-    }
-
-    #[test]
-    fn test_size() {
-        let buffer = Buffer::new("Hello, world!".to_string());
-        assert_eq!(buffer.len(), 13);
-    }
-
-    #[test]
-    fn test_remove_prefix() {
-        let mut buffer = Buffer::new("Hello, world!".to_string());
-        assert_eq!(buffer.remove_prefix(6), Ok(()));
-        assert_eq!(buffer.as_str(), " world!");
-        assert_eq!(buffer.remove_prefix(7), Ok(()));
-        assert_eq!(buffer.as_str(), "");
-        assert_eq!(
-            buffer.remove_prefix(1),
-            Err("Buffer::remove_prefix out of bounds")
-        );
-    }
-
-    /// BufferList tests
-
-    #[test]
-    fn test_append() {
-        let mut buffer_list1 = BufferList {
-            buffers: VecDeque::new(),
-        };
-        let mut buffer_list2 = BufferList {
-            buffers: VecDeque::new(),
-        };
-
-        buffer_list1
-            .buffers
-            .push_back(Buffer::new("Hello".to_string()));
-        buffer_list2
-            .buffers
-            .push_back(Buffer::new(" World".to_string()));
-
-        buffer_list1.append(&mut buffer_list2);
-
-        assert_eq!(buffer_list1.buffers.len(), 2);
-        assert_eq!(buffer_list1.concatenate(), "Hello World");
+        let buffer = Buffer::new([1, 2, 3, 4, 5]);
+        assert_eq!(buffer.at(0), Some(1));
+        assert_eq!(buffer.at(4), Some(5));
+        assert_eq!(buffer.at(5), None);
     }
 
     #[test]
     fn test_len() {
-        let mut buffer_list = BufferList {
-            buffers: VecDeque::new(),
-        };
-        buffer_list
-            .buffers
-            .push_back(Buffer::new("Hello".to_string()));
-        buffer_list
-            .buffers
-            .push_back(Buffer::new(" World".to_string()));
+        let buffer = Buffer::new([1, 2, 3, 4, 5]);
+        assert_eq!(buffer.len(), 5);
+    }
 
-        assert_eq!(buffer_list.len(), 11);
+    #[test]
+    fn test_remove_prefix() {
+        let mut buffer = Buffer::new([1, 2, 3, 4, 5]);
+        assert_eq!(buffer.remove_prefix(3), Ok(()));
+        assert_eq!(buffer.as_slice(), Some(&[4, 5][..]));
+        assert_eq!(
+            buffer.remove_prefix(3),
+            Err("Buffer::remove_prefix n too large")
+        );
+    }
+
+    #[test]
+    fn test_as_ref() {
+        let buffer = Buffer::new([1, 2, 3, 4, 5]);
+        assert_eq!(buffer.as_ref(), &[1, 2, 3, 4, 5][..]);
+    }
+
+    // BufferList tests
+    #[test]
+    fn test_append() {
+        let mut buffer_list1 = BufferList {
+            buffers: VecDeque::from(vec![Buffer::new([1, 2, 3])]),
+        };
+        let mut buffer_list2 = BufferList {
+            buffers: VecDeque::from(vec![Buffer::new([4, 5, 6])]),
+        };
+        buffer_list1.append(&mut buffer_list2);
+        assert_eq!(buffer_list1.len(), 6);
+        assert_eq!(buffer_list2.len(), 0);
+    }
+
+    #[test]
+    fn test_len_buffer_list() {
+        let buffer_list = BufferList {
+            buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
+        };
+        assert_eq!(buffer_list.len(), 6);
+    }
+
+    #[test]
+    fn test_buffers() {
+        let buffer_list = BufferList {
+            buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
+        };
+        assert_eq!(buffer_list.buffers().len(), 2);
     }
 
     #[test]
     fn test_to_buffer() {
-        let mut buffer_list = BufferList {
-            buffers: VecDeque::new(),
+        let buffer_list = BufferList {
+            buffers: VecDeque::from(vec![Buffer::new([1, 2, 3])]),
         };
-        buffer_list
-            .buffers
-            .push_back(Buffer::new("Hello".to_string()));
-
-        let buffer = buffer_list.to_buffer().unwrap().unwrap();
-        assert_eq!(buffer.as_str(), "Hello");
+        assert_eq!(
+            buffer_list.to_buffer().unwrap().unwrap().as_slice(),
+            Some(&[1, 2, 3][..])
+        );
     }
 
     #[test]
     fn test_remove_prefix_buffer_list() {
         let mut buffer_list = BufferList {
-            buffers: VecDeque::new(),
+            buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
         };
-        buffer_list
-            .buffers
-            .push_back(Buffer::new("Hello".to_string()));
-        buffer_list
-            .buffers
-            .push_back(Buffer::new(" World".to_string()));
-
-        buffer_list.remove_prefix(6).unwrap();
-        assert_eq!(buffer_list.concatenate(), "World");
+        assert_eq!(buffer_list.remove_prefix(4), Ok(()));
+        assert_eq!(buffer_list.len(), 2);
+        assert_eq!(
+            buffer_list.remove_prefix(3),
+            Err("BufferList::remove_prefix out of bounds")
+        );
     }
 
     #[test]
     fn test_concatenate() {
-        let mut buffer_list = BufferList {
-            buffers: VecDeque::new(),
+        let buffer_list = BufferList {
+            buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
         };
-        buffer_list
-            .buffers
-            .push_back(Buffer::new("Hello".to_string()));
-        buffer_list
-            .buffers
-            .push_back(Buffer::new(" World".to_string()));
-
-        assert_eq!(buffer_list.concatenate(), "Hello World");
+        let result: [u8; 6] = buffer_list.concatenate();
+        assert_eq!(result, [1, 2, 3, 4, 5, 6]);
     }
 
-    /// BufferViewList tests
+    // BufferViewList tests
     #[test]
-    fn test_new_bufferviewlist() {
-        let mut buffer_list = BufferList::default();
-        buffer_list
-            .buffers
-            .push_back(Buffer::new("Hello".to_string()));
-        buffer_list
-            .buffers
-            .push_back(Buffer::new(", world!".to_string()));
-
+    fn test_new_buffer_viewlist() {
+        let buffer_list = BufferList {
+            buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
+        };
         let view_list = BufferViewList::new(&buffer_list);
-
-        assert_eq!(view_list.len(), 13);
-        assert!(!view_list.is_empty());
+        assert_eq!(view_list.len(), 6);
     }
 
     #[test]
-    fn test_new_str() {
-        let view_list = BufferViewList::new_str("Hello, world!");
-
-        assert_eq!(view_list.len(), 13);
-        assert!(!view_list.is_empty());
+    fn test_new_from_slice() {
+        let slice = &[1, 2, 3, 4, 5, 6];
+        let view_list = BufferViewList::new_frome_slice(slice);
+        assert_eq!(view_list.len(), 6);
     }
 
     #[test]
-    fn test_new_string() {
-        let s = "Hello, world!".to_string();
-        let view_list = BufferViewList::new_string(&s);
-
-        assert_eq!(view_list.len(), 13);
-        assert!(!view_list.is_empty());
+    fn test_len_buffer_viewlist() {
+        let slice = &[1, 2, 3, 4, 5, 6];
+        let view_list = BufferViewList::new_frome_slice(slice);
+        assert_eq!(view_list.len(), 6);
     }
 
     #[test]
-    fn test_remove_prefix_bufferviewlist() {
-        let mut view_list = BufferViewList::new_str("Hello, world!");
-
-        assert_eq!(view_list.len(), 13);
-        assert!(!view_list.is_empty());
-
-        view_list.remove_prefix(6).unwrap();
-
-        assert_eq!(view_list.len(), 7);
-        assert_eq!(*view_list.views.front().unwrap(), " world!");
+    fn test_is_empty() {
+        let slice = &[];
+        let view_list = BufferViewList::new_frome_slice(slice);
+        assert!(view_list.is_empty());
     }
 
     #[test]
-    fn test_remove_prefix_out_of_bounds() {
-        let mut view_list = BufferViewList::new_str("Hello, world!");
-
-        assert_eq!(view_list.len(), 13);
-        assert!(!view_list.is_empty());
-
-        let result = view_list.remove_prefix(20);
-
-        assert!(result.is_err());
+    fn test_remove_prefix_buffer_viewlist() {
+        let slice = &[1, 2, 3, 4, 5, 6];
+        let mut view_list = BufferViewList::new_frome_slice(slice);
+        assert_eq!(view_list.remove_prefix(3), Ok(()));
+        assert_eq!(view_list.len(), 3);
         assert_eq!(
-            result.unwrap_err(),
-            "BufferViewList::remove_prefix out of bounds"
+            view_list.remove_prefix(4),
+            Err("BufferViewList::remove_prefix out of bounds")
         );
+    }
+
+    #[test]
+    fn test_as_io_slices() {
+        let slice = &[1, 2, 3, 4, 5, 6];
+        let view_list = BufferViewList::new_frome_slice(slice);
+        let io_slices = view_list.as_io_slices();
+        assert_eq!(io_slices.len(), 1);
+        assert_eq!(io_slices[0].len(), 6);
     }
 }
