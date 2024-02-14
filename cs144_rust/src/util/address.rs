@@ -8,7 +8,7 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 /// Address 结构体，用于封装socket地址信息
 #[derive(Debug)]
 pub struct Address {
-    inner: SockAddr,
+    pub inner: SockAddr,
 }
 
 impl Address {
@@ -39,19 +39,26 @@ impl Address {
     }
 
     /// (sokcet)
-    pub fn new_sockaddr(addr: &SocketAddr) -> Self {
+    pub fn new_socketaddr(addr: &SocketAddr) -> Self {
         Address {
-            inner: SockAddr::from(*addr),
+            inner: SockAddr::from(addr.clone()),
+        }
+    }
+
+    pub fn new_sockaddr(addr: &SockAddr) -> Self {
+        Address {
+            inner: addr.clone(),
         }
     }
 }
-trait AddressTrait {
+pub trait AddressTrait {
     fn ip_port(&self) -> (String, u16);
     fn ip(&self) -> String;
     fn port(&self) -> u16;
     fn ipv4_numeric(&self) -> u32;
     fn from_ipv4_numeric(ipv4_numeric: u32) -> Self;
     fn to_string(&self) -> String;
+    fn to_sock_addr(&self) -> &SockAddr;
 }
 
 impl AddressTrait for Address {
@@ -92,6 +99,10 @@ impl AddressTrait for Address {
     fn to_string(&self) -> String {
         format!("{}:{}", self.ip(), self.port())
     }
+
+    fn to_sock_addr(&self) -> &SockAddr {
+        &self.inner
+    }
 }
 
 // PartialEq for !=
@@ -129,7 +140,7 @@ mod tests {
     #[test]
     fn test_new_sockaddr() {
         let socket_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080);
-        let address = Address::new_sockaddr(&socket_addr);
+        let address = Address::new_socketaddr(&socket_addr);
         assert_eq!(address.ip(), "127.0.0.1");
         assert_eq!(address.port(), 8080);
     }
