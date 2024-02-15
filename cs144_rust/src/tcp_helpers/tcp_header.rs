@@ -58,7 +58,7 @@ pub struct TCPHeader {
 
 pub trait TCPHeaderTrait {
     fn parse(&mut self, p: &mut NetParser) -> Result<(), ParseError>; // Parse the TCP fields from the provided NetParser
-    fn serialize<const N: usize>(&self) -> Result<[u8; N], &'static str>; // Serialize the TCP header into a byte array
+    fn serialize(&self) -> Result<Vec<u8>, &'static str>; // Serialize the TCP header into a byte array
     fn summary(&self) -> String; // Return a string containing a human-readable summary of the header
 }
 
@@ -109,7 +109,7 @@ impl TCPHeaderTrait for TCPHeader {
         Ok(())
     }
 
-    fn serialize<const N: usize>(&self) -> Result<[u8; N], &'static str> {
+    fn serialize(&self) -> Result<Vec<u8>, &'static str> {
         if self.doff < 5 {
             return Err("TCP Header length is greater than 20 bytes");
         }
@@ -132,7 +132,7 @@ impl TCPHeaderTrait for TCPHeader {
         NetUnparser::u16(&mut buffer, self.cksum);
         NetUnparser::u16(&mut buffer, self.uptr);
 
-        return Ok(buffer.try_into().unwrap());
+        return Ok(buffer);
     }
 
     fn summary(&self) -> String {
