@@ -64,7 +64,7 @@ impl NetParser {
 
     fn check_size(&self, size: usize) -> Result<(), ParseError> {
         if self.buffer.len() < size {
-            Err(ParseError::PacketTooShort.into())
+            Err(ParseError::PacketTooShort)
         } else {
             Ok(())
         }
@@ -80,6 +80,10 @@ impl NetParser {
 
     pub fn u8(&mut self) -> Result<u8, ParseError> {
         parse_num!(self, u8, 1)
+    }
+
+    pub fn buffer(&self) -> Buffer {
+        self.buffer.clone()
     }
 }
 
