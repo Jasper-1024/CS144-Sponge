@@ -77,26 +77,42 @@ pub struct BufferList {
 }
 
 impl BufferList {
+    pub fn new() -> Self {
+        BufferList {
+            buffers: VecDeque::new(),
+        }
+    }
     /**
      * 这里会有所有权的转移.
      */
-    fn append(&mut self, other: &mut Self) {
+    pub fn append(&mut self, other: &mut Self) {
         self.buffers.append(&mut other.buffers);
     }
 
+    pub fn append_vec(&mut self, data: Vec<u8>) {
+        self.buffers.push_back(Buffer {
+            storage: Rc::from(data),
+            starting_offset: 0,
+        });
+    }
+
+    pub fn append_buffer(&mut self, buffer: Buffer) {
+        self.buffers.push_back(buffer);
+    }
+
     // size... rust used len more often..
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.buffers.iter().map(|b| b.len()).sum()
     }
 
-    fn buffers(&self) -> &VecDeque<Buffer> {
+    pub fn buffers(&self) -> &VecDeque<Buffer> {
         &self.buffers
     }
 
     /**
      * to buffer
      */
-    fn to_buffer(&self) -> Result<Option<Buffer>, &'static str> {
+    pub fn to_buffer(&self) -> Result<Option<Buffer>, &'static str> {
         match self.buffers.len() {
             0 => Ok(None),
             1 => Ok(Some(self.buffers[0].clone())),
@@ -106,7 +122,7 @@ impl BufferList {
     /**
      * remove prefix from the front of the buffer list
      */
-    fn remove_prefix(&mut self, mut n: usize) -> Result<(), &'static str> {
+    pub fn remove_prefix(&mut self, mut n: usize) -> Result<(), &'static str> {
         while n > 0 {
             // first element
             if let Some(first) = self.buffers.front_mut() {
@@ -128,7 +144,7 @@ impl BufferList {
     /**
      * make a copy of all buffers
      */
-    fn concatenate<const N: usize>(&self) -> [u8; N] {
+    pub fn concatenate<const N: usize>(&self) -> [u8; N] {
         let mut result = Vec::new();
         for buffer in &self.buffers {
             result.extend_from_slice(buffer.as_ref());
