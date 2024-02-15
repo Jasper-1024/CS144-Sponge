@@ -99,22 +99,31 @@ fn get_random_generator() -> ThreadRng {
 }
 
 ///  The internet checksum algorithm
-struct InternetChecksum {
+pub struct InternetChecksum {
     sum: u32,
     parity: bool,
+}
+
+impl Default for InternetChecksum {
+    fn default() -> Self {
+        Self {
+            sum: Default::default(),
+            parity: Default::default(),
+        }
+    }
 }
 // ip 头部校验和 | tcp udp 校验和
 ///! For more information, see the [Wikipedia page](https://en.wikipedia.org/wiki/IPv4_header_checksum)
 ///! on the Internet checksum, and consult the [IP](\ref rfc::rfc791) and [TCP](\ref rfc::rfc793) RFCs.
 impl InternetChecksum {
-    fn new(initial_sum: u32) -> Self {
+    pub fn new(initial_sum: u32) -> Self {
         InternetChecksum {
             sum: initial_sum,
             parity: false,
         }
     }
 
-    fn add(&mut self, data: &[u8]) {
+    pub fn add(&mut self, data: &[u8]) {
         for &byte in data {
             let val = if !self.parity {
                 (byte as u32) << 8
@@ -126,7 +135,7 @@ impl InternetChecksum {
         }
     }
 
-    fn value(&self) -> u16 {
+    pub fn value(&self) -> u16 {
         let mut ret = self.sum;
         while ret > 0xffff {
             ret = (ret >> 16) + (ret & 0xffff);
