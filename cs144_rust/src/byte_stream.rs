@@ -8,8 +8,8 @@ pub struct ByteStream {
     write_index: usize, // Index of the next byte to write.
     end: bool,
     err: bool,
-    read_count: usize,  // Number of bytes read.
-    write_count: usize, // Number of bytes written.
+    read_count: u64,  // Number of bytes read.
+    write_count: u64, // Number of bytes written.
 }
 
 pub trait ByteStreamTrait {
@@ -53,10 +53,10 @@ pub trait ByteStreamTrait {
     fn eof(&self) -> bool;
 
     // 返回已写入的总字节数
-    fn bytes_written(&self) -> usize;
+    fn bytes_written(&self) -> u64;
 
     // 返回已读取的总字节数
-    fn bytes_read(&self) -> usize;
+    fn bytes_read(&self) -> u64;
 }
 
 impl ByteStream {
@@ -98,7 +98,7 @@ impl ByteStreamTrait for ByteStream {
             self.buffer[0..(len - first.len())].copy_from_slice(&second[0..(len - first.len())]);
             self.write_index = len - first.len(); // 更新写入位置
         }
-        self.write_count += len; // 更新已写入的字节数
+        self.write_count += len as u64; // 更新已写入的字节数
         len
     }
 
@@ -154,7 +154,7 @@ impl ByteStreamTrait for ByteStream {
         }
         let len = len.min(self.buffer_size()); // 可读取的最大字节数
         self.read_index = (self.read_index + len) % self.real_capacity(); // 更新读取位置
-        self.read_count += len; // 更新已读取的字节数
+        self.read_count += len as u64; // 更新已读取的字节数
     }
     // 调用 已有实现
     fn read(&mut self, len: usize) -> Vec<u8> {
@@ -194,11 +194,11 @@ impl ByteStreamTrait for ByteStream {
         self.end && self.buffer_empty()
     }
     // 已写入的字节数
-    fn bytes_written(&self) -> usize {
+    fn bytes_written(&self) -> u64 {
         self.write_count
     }
     // 已读取的字节数
-    fn bytes_read(&self) -> usize {
+    fn bytes_read(&self) -> u64 {
         self.read_count
     }
 }
