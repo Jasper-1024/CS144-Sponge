@@ -2,7 +2,7 @@ use std::vec;
 
 use super::buffer::Buffer;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, PartialEq)]
 pub enum ParseError {
     // #[error("Success")] // rust 不需要这个,返回 ok
     // NoError,
