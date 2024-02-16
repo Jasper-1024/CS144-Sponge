@@ -145,7 +145,7 @@ impl InternetChecksum {
 }
 
 /// hex dump 任何数据
-fn hexdump(data: &[u8], indent: usize) {
+pub fn hexdump(data: &[u8], indent: usize) {
     let indent_string = " ".repeat(indent);
     let mut printed = 0;
     let mut pchars = String::new();
