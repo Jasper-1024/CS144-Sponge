@@ -56,6 +56,27 @@ pub struct TCPHeader {
     pub uptr: u16,            // urgent pointer
 }
 
+impl Default for TCPHeader {
+    fn default() -> Self {
+        TCPHeader {
+            sport: 0,
+            dport: 0,
+            seqno: WrappingInt32::new(0),
+            ackno: WrappingInt32::new(0),
+            doff: 0,
+            urg: false,
+            ack: false,
+            psh: false,
+            rst: false,
+            syn: false,
+            fin: false,
+            win: 0,
+            cksum: 0,
+            uptr: 0,
+        }
+    }
+}
+
 pub trait TCPHeaderTrait {
     fn parse(&mut self, p: &mut NetParser) -> Result<(), ParseError>; // Parse the TCP fields from the provided NetParser
     fn serialize(&self) -> Result<Vec<u8>, &'static str>; // Serialize the TCP header into a byte array
@@ -106,6 +127,13 @@ impl TCPHeaderTrait for TCPHeader {
         self.win = p.u16()?;
         self.cksum = p.u16()?;
         self.uptr = p.u16()?;
+
+        if self.doff < 5 {
+            return Err(ParseError::HeaderTooShort);
+        }
+        // skip any options or anything extra in the header
+        p.remove_prefix(self.doff as usize * 4 - TCP_HEADER_LENGTH)?; // Remove the prefix from the buffer
+
         Ok(())
     }
 
