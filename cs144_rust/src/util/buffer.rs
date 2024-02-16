@@ -15,6 +15,13 @@ impl Buffer {
         }
     }
 
+    pub fn new_form_vec(data: Vec<u8>) -> Self {
+        Buffer {
+            storage: Rc::from(data.into_boxed_slice()),
+            starting_offset: 0,
+        }
+    }
+
     /**
      * 返回u8切片, 有可能为空
      */
@@ -63,10 +70,28 @@ impl Buffer {
     }
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Buffer {
+            storage: Rc::from(Vec::new().into_boxed_slice()),
+            starting_offset: 0,
+        }
+    }
+}
+
 // as_ref 方法返回一个 u8 数组的引用
 impl AsRef<[u8]> for Buffer {
     fn as_ref(&self) -> &[u8] {
         self.as_slice().unwrap_or_default()
+    }
+}
+
+impl From<Vec<u8>> for Buffer {
+    fn from(data: Vec<u8>) -> Self {
+        Buffer {
+            storage: Rc::from(data.into_boxed_slice()),
+            starting_offset: 0,
+        }
     }
 }
 
@@ -144,12 +169,12 @@ impl BufferList {
     /**
      * make a copy of all buffers
      */
-    pub fn concatenate<const N: usize>(&self) -> [u8; N] {
+    pub fn concatenate(&self) -> Vec<u8> {
         let mut result = Vec::new();
         for buffer in &self.buffers {
             result.extend_from_slice(buffer.as_ref());
         }
-        result.try_into().unwrap()
+        result
     }
 }
 
@@ -329,7 +354,7 @@ mod tests {
         let buffer_list = BufferList {
             buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
         };
-        let result: [u8; 6] = buffer_list.concatenate();
+        let result = buffer_list.concatenate();
         assert_eq!(result, [1, 2, 3, 4, 5, 6]);
     }
 
