@@ -95,6 +95,12 @@ impl From<Vec<u8>> for Buffer {
     }
 }
 
+impl<const N: usize> From<[u8; N]> for Buffer {
+    fn from(data: [u8; N]) -> Self {
+        Buffer::new(data)
+    }
+}
+
 // A reference-counted discontiguous string that can discard bytes from the front
 #[derive(Default, Clone)]
 pub struct BufferList {
