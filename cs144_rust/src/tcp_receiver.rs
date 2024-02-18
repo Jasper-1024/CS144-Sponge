@@ -56,7 +56,7 @@ impl<'a> TCPReceiverTrait<'a> for TCPReceiver<'a> {
         self.reassembler.unassembled_bytes()
     }
 
-    fn segment_received(&'a mut self, seg: &'a TCPSegment) {
+    fn segment_received(&mut self, seg: &'a TCPSegment) {
         let header = seg.header;
         if !self.syn_received {
             if !header.syn {
