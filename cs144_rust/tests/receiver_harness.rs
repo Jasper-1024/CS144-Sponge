@@ -1,10 +1,10 @@
-use std::usize;
+use std::{cell::RefCell, rc::Rc, usize};
 
 use cs144_rust::{
     byte_stream::ByteStreamTrait,
     tcp_helpers::{
         tcp_header::TCPHeaderTrait,
-        tcp_segment::{self, TCPSegment},
+        tcp_segment:: TCPSegment,
         tcp_state::{TCPReceiverStateSummary, TCPState},
     },
     tcp_receiver::{TCPReceiver, TCPReceiverTrait},
@@ -13,11 +13,16 @@ use cs144_rust::{
 
 // 对应于 C++ 中的 ReceiverTestStep 结构体
 // 任何测试步骤的 trait
-pub trait ReceiverTestStep<'a> {
+pub trait ReceiverTestStep {
     fn to_string(&self) -> String {
         String::from("ReceiverTestStep")
     }
-    fn execute(&self, receiver: &'a mut TCPReceiver<'a>);
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
+        todo!()
+    }
+    fn execute_with_segment<'a>(&self, receiver: Rc<RefCell<TCPReceiver<'a>>>, seg: &'a TCPSegment) {
+        todo!()
+    }
 }
 
 // 对应于 C++ 中的 ReceiverExpectationViolation 类
@@ -72,14 +77,15 @@ impl ExpectState {
 //     }
 // }
 
-impl<'a> ReceiverTestStep<'a> for ExpectState {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
+impl ReceiverTestStep for ExpectState {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
+        let mut receiver = receiver.borrow_mut();
         // 解析状态与预期状态是否一致
         assert_eq!(
-            TCPState::state_summary(receiver),
+            TCPState::state_summary(&*receiver),
             self.state,
             "The TCPReceiver was in state `{}`, but it was expected to be in state `{}`",
-            TCPState::state_summary(receiver),
+            TCPState::state_summary(&*receiver),
             self.state
         );
     }
@@ -90,8 +96,9 @@ pub struct ExpectAckno {
     ackno: Option<WrappingInt32>,
 }
 
-impl<'a> ReceiverTestStep<'a> for ExpectAckno {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
+impl ReceiverTestStep for ExpectAckno {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
+        let receiver = receiver.borrow();
         assert_eq!(
             receiver.ackno(),
             self.ackno,
@@ -103,14 +110,14 @@ impl<'a> ReceiverTestStep<'a> for ExpectAckno {
         );
     }
 }
-
 // ExpectWindow
 pub struct ExpectWindow {
     window: usize,
 }
 
-impl<'a> ReceiverTestStep<'a> for ExpectWindow {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
+impl ReceiverTestStep for ExpectWindow {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
+        let receiver = receiver.borrow();
         assert_eq!(
             receiver.window_size(),
             self.window,
@@ -125,13 +132,13 @@ impl<'a> ReceiverTestStep<'a> for ExpectWindow {
 pub struct ExpectUnassembledBytes {
     n_bytes: usize,
 }
-impl<'a> ReceiverTestStep<'a> for ExpectUnassembledBytes {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
+impl ReceiverTestStep for ExpectUnassembledBytes {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         assert_eq!(
-            receiver.unassembled_bytes(),
+            receiver.borrow().unassembled_bytes(),
             self.n_bytes,
             "The TCPReceiver reported {} unassembled bytes, but it was expected to be {}",
-            receiver.unassembled_bytes(),
+            receiver.borrow().unassembled_bytes(),
             self.n_bytes
         );
     }
@@ -142,13 +149,13 @@ pub struct ExpectTotalAssembledBytes {
     n_bytes: usize,
 }
 
-impl<'a> ReceiverTestStep<'a> for ExpectTotalAssembledBytes {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
+impl ReceiverTestStep for ExpectTotalAssembledBytes {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         assert_eq!(
-            receiver.stream_out().borrow().bytes_written(),
+            receiver.borrow().stream_out().borrow().bytes_written(),
             self.n_bytes as u64,
             "The TCPReceiver reported {} total assembled bytes, but it was expected to be {}",
-            receiver.stream_out().borrow().bytes_written(),
+            receiver.borrow().stream_out().borrow().bytes_written(),
             self.n_bytes
         );
     }
@@ -157,10 +164,10 @@ impl<'a> ReceiverTestStep<'a> for ExpectTotalAssembledBytes {
 // ExpectEof | receiver.stream_out().eof() == true
 pub struct ExpectEof;
 
-impl<'a> ReceiverTestStep<'a> for ExpectEof {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
+impl ReceiverTestStep for ExpectEof {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         assert!(
-            receiver.stream_out().borrow().eof(),
+            receiver.borrow().stream_out().borrow().eof(),
             "The TCPReceiver reported that the output stream was not at EOF, but it was expected to be at EOF"
         );
     }
@@ -169,10 +176,10 @@ impl<'a> ReceiverTestStep<'a> for ExpectEof {
 // ExpectInputNotEnded | receiver.stream_out().input_ended() == false
 pub struct ExpectInputNotEnded;
 
-impl<'a> ReceiverTestStep<'a> for ExpectInputNotEnded {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
+impl ReceiverTestStep for ExpectInputNotEnded {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         assert!(
-            !receiver.stream_out().borrow().input_ended(),
+            !receiver.borrow().stream_out().borrow().input_ended(),
             "The TCPReceiver reported that the input stream was at EOF, but it was expected to not be at EOF"
         );
     }
@@ -189,9 +196,9 @@ impl<const N: usize> ExpectBytes<N> {
     }
 }
 
-impl<'a, const N: usize> ReceiverTestStep<'a> for ExpectBytes<N> {
-    fn execute(&self, receiver: &'a mut TCPReceiver) {
-        let binding = receiver.stream_out();
+impl<const N: usize> ReceiverTestStep for ExpectBytes<N> {
+    fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
+        let binding = receiver.borrow().stream_out();
 
         let res = binding.borrow().buffer_size();
         assert_eq!(
@@ -226,7 +233,7 @@ impl Result {
     }
 }
 
-pub struct SegmentArrives<'a> {
+pub struct SegmentArrives {
     pub ack: bool,
     pub rst: bool,
     pub syn: bool,
@@ -236,11 +243,10 @@ pub struct SegmentArrives<'a> {
     pub win: u16,
     pub data: Vec<u8>,
     pub result: Option<Result>,
-    pub tcp_segment: &'a TCPSegment,
 }
 
-impl<'a> SegmentArrives<'a> {
-    pub fn default(tcp_segment: &'a TCPSegment) -> Self {
+impl SegmentArrives {
+    pub fn default() -> Self {
         Self {
             ack: false,
             rst: false,
@@ -251,7 +257,6 @@ impl<'a> SegmentArrives<'a> {
             win: 0,
             data: vec![],
             result: None,
-            tcp_segment: tcp_segment,
         }
     }
     // build_segment
@@ -342,8 +347,8 @@ impl SegmentArrivesBuilder {
         self
     }
 
-    pub fn build<'a>(self, tcp_segment: &'a TCPSegment) -> SegmentArrives<'a> {
-        let mut seg_arrivers = SegmentArrives::default(tcp_segment);
+    pub fn build<'a>(self) -> SegmentArrives {
+        let mut seg_arrivers = SegmentArrives::default();
         seg_arrivers.ack = self.ack;
         seg_arrivers.fin = self.fin;
         seg_arrivers.syn = self.syn;
@@ -358,21 +363,47 @@ impl SegmentArrivesBuilder {
     }
 }
 
-impl<'a> ReceiverTestStep<'a> for SegmentArrives<'a> {
-    fn execute(&self, receiver: &'a mut TCPReceiver<'a>) {
+impl ReceiverTestStep for SegmentArrives {
+    // just for None
+    // fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
+    //     let seg = self.build_segment();
+    //     let mut o = String::new();
+    //     o.push_str(&seg.header.summary());
+    //     if !self.data.is_empty() {
+    //         o.push_str(&format!(" with data {:?}", self.data));
+    //     }
+
+    //     receiver.borrow_mut().segment_received(&seg);
+
+    //     let res = if receiver.borrow().ackno().is_none() {
+    //         Result::NotSyn
+    //     } else {
+    //         Result::Ok
+    //     };
+
+    //     if let Some(expected_res) = self.result.clone() {
+    //         assert_eq!(
+    //             res,
+    //             expected_res,
+    //             "TCPReceiver::segment_received() reported `{}` in response to `{}`, but it was expected to report `{}`",
+    //             res.name(),
+    //             o,
+    //             expected_res.name()
+    //         );
+    //     }
+    // }
+
+    fn execute_with_segment<'a>(&self, receiver: Rc<RefCell<TCPReceiver<'a>>>, seg: &'a TCPSegment) {
         // let seg = self.build_segment();
         let mut o = String::new();
-        o.push_str(&self.tcp_segment.header.summary());
+        o.push_str(&seg.header.summary());
         if !self.data.is_empty() {
             o.push_str(&format!(" with data {:?}", self.data));
         }
 
-        // 这里不得不使用 unsafe 代码, ackno 需要不可变引用,无论如何都无法绕过.
-        let receiver_ref: &'a TCPReceiver<'a> = unsafe { std::mem::transmute_copy(&receiver) };
+        receiver.borrow_mut().segment_received(seg);
 
-        receiver.segment_received(self.tcp_segment);
-
-        let res = if receiver_ref.ackno().is_none() {
+        let res = if receiver.borrow().ackno().is_none() {
             Result::NotSyn
         } else {
             Result::Ok
@@ -394,18 +425,24 @@ impl<'a> ReceiverTestStep<'a> for SegmentArrives<'a> {
 // 对应于 C++ 中的 TCPReceiverTestHarness 类
 // 持有 TCPReceiver 实例, 执行 任何实现了 ReceiverTestStep 的测试步骤
 pub struct TCPReceiverTestHarness<'a> {
-    receiver: TCPReceiver<'a>,
+    receiver: Rc<RefCell<TCPReceiver<'a>>>,
 }
 
 impl<'a> TCPReceiverTestHarness<'a> {
     // 创建一个新的 TCPReceiverTestHarness
     pub fn new(capacity: usize) -> Self {
         let receiver = TCPReceiver::new(capacity);
-        Self { receiver }
+        Self {
+            receiver: Rc::new(RefCell::new(receiver)),
+        }
     }
 
     // 执行所有的测试步骤
-    pub fn execute(&'a mut self, step: &dyn ReceiverTestStep<'a>) {
-        step.execute(&mut self.receiver);
+    pub fn execute(&self, step: &'a dyn ReceiverTestStep) {
+        step.execute(self.receiver.clone());
     }
+
+    // pub fn execute_with_segment(&self, step: &'a dyn ReceiverTestStep, seg: &'a TCPSegment) {
+    //     step.execute_with_segment(self.receiver.clone(), seg);
+    // }
 }
