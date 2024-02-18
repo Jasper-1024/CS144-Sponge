@@ -30,7 +30,7 @@ pub trait TCPReceiverTrait<'a> {
     fn ackno(&self) -> Option<WrappingInt32>; // next ackno
     fn window_size(&self) -> usize; // window size
     fn unassembled_bytes(&self) -> usize; // unassembled bytes
-    fn segment_received(&'a mut self, seg: &'a TCPSegment); // handle segment
+    fn segment_received(&mut self, seg: &'a TCPSegment); // handle segment
     fn stream_out(&self) -> Rc<RefCell<ByteStream>>; // get stream
 }
 
