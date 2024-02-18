@@ -39,6 +39,12 @@ impl WrappingInt32 {
     }
 }
 
+impl From<u32> for WrappingInt32 {
+    fn from(n: u32) -> Self {
+        WrappingInt32(n)
+    }
+}
+
 impl fmt::Display for WrappingInt32 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
