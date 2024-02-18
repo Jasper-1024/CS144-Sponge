@@ -4,7 +4,7 @@ use cs144_rust::{
     byte_stream::ByteStreamTrait,
     tcp_helpers::{
         tcp_header::TCPHeaderTrait,
-        tcp_segment::TCPSegment,
+        tcp_segment::{self, TCPSegment},
         tcp_state::{TCPReceiverStateSummary, TCPState},
     },
     tcp_receiver::{TCPReceiver, TCPReceiverTrait},
@@ -226,22 +226,36 @@ impl Result {
     }
 }
 
-pub struct SegmentArrives<'a, const N: usize> {
-    ack: bool,
-    rst: bool,
-    syn: bool,
-    fin: bool,
-    seqno: WrappingInt32,
-    ackno: WrappingInt32,
-    win: u16,
-    data: [u8; N],
-    result: Option<Result>,
-    tcp_segment: &'a TCPSegment,
+pub struct SegmentArrives<'a> {
+    pub ack: bool,
+    pub rst: bool,
+    pub syn: bool,
+    pub fin: bool,
+    pub seqno: WrappingInt32,
+    pub ackno: WrappingInt32,
+    pub win: u16,
+    pub data: Vec<u8>,
+    pub result: Option<Result>,
+    pub tcp_segment: &'a TCPSegment,
 }
 
-impl<'a, const N: usize> SegmentArrives<'a, N> {
+impl<'a> SegmentArrives<'a> {
+    pub fn default(tcp_segment: &'a TCPSegment) -> Self {
+        Self {
+            ack: false,
+            rst: false,
+            syn: false,
+            fin: false,
+            seqno: WrappingInt32::new(0),
+            ackno: WrappingInt32::new(0),
+            win: 0,
+            data: vec![],
+            result: None,
+            tcp_segment: tcp_segment,
+        }
+    }
     // build_segment
-    fn build_segment(&self) -> TCPSegment {
+    pub fn build_segment(&mut self) -> TCPSegment {
         let mut seg = TCPSegment::default();
         seg.payload = self.data.clone().into();
         seg.header.ack = self.ack;
@@ -255,20 +269,96 @@ impl<'a, const N: usize> SegmentArrives<'a, N> {
     }
 }
 
-// impl<'a, const N: usize> SegmentArrives<'a, N> {
-//     fn execute(&self, receiver: &'a mut TCPReceiver<'a>) {
-//         // let seg = self.build_segment();
-//         let mut o = String::new();
-//         o.push_str(&self.tcp_segment.header.summary());
-//         if !self.data.is_empty() {
-//             o.push_str(&format!(" with data {:?}", self.data));
-//         }
+pub struct SegmentArrivesBuilder {
+    ack: bool,
+    rst: bool,
+    syn: bool,
+    fin: bool,
+    seqno: WrappingInt32,
+    ackno: WrappingInt32,
+    win: u16,
+    data: Vec<u8>,
+    result: Option<Result>,
+}
 
-//         receiver.segment_received(self.tcp_segment);
-//     }
-// }
+impl SegmentArrivesBuilder {
+    pub fn new() -> Self {
+        Self {
+            ack: false,
+            rst: false,
+            syn: false,
+            fin: false,
+            seqno: WrappingInt32::new(0),
+            ackno: WrappingInt32::new(0),
+            win: 0,
+            data: vec![],
+            result: None,
+        }
+    }
 
-impl<'a, const N: usize> ReceiverTestStep<'a> for SegmentArrives<'a, N> {
+    pub fn ack(mut self, ackno: u32) -> Self {
+        self.ack = true;
+        self.ackno = WrappingInt32::new(ackno);
+        self
+    }
+
+    pub fn rst(mut self) -> Self {
+        self.rst = true;
+        self
+    }
+
+    pub fn syn(mut self) -> Self {
+        self.syn = true;
+        self
+    }
+
+    pub fn fin(mut self) -> Self {
+        self.fin = true;
+        self
+    }
+
+    pub fn seqno(mut self, seqno: u32) -> Self {
+        self.seqno = seqno.into();
+        self
+    }
+
+    pub fn ackno(mut self, ackno: u32) -> Self {
+        self.ackno = ackno.into();
+        self
+    }
+
+    pub fn win(mut self, win: u16) -> Self {
+        self.win = win;
+        self
+    }
+
+    pub fn data(mut self, data: Vec<u8>) -> Self {
+        self.data = data;
+        self
+    }
+
+    pub fn result(mut self, result: Option<Result>) -> Self {
+        self.result = result;
+        self
+    }
+
+    pub fn build<'a>(self, tcp_segment: &'a TCPSegment) -> SegmentArrives<'a> {
+        let mut seg_arrivers = SegmentArrives::default(tcp_segment);
+        seg_arrivers.ack = self.ack;
+        seg_arrivers.fin = self.fin;
+        seg_arrivers.syn = self.syn;
+        seg_arrivers.rst = self.rst;
+        seg_arrivers.ackno = self.ackno;
+        seg_arrivers.seqno = self.seqno;
+        seg_arrivers.win = self.win;
+        seg_arrivers.data = self.data;
+        seg_arrivers.result = self.result;
+
+        seg_arrivers
+    }
+}
+
+impl<'a> ReceiverTestStep<'a> for SegmentArrives<'a> {
     fn execute(&self, receiver: &'a mut TCPReceiver<'a>) {
         // let seg = self.build_segment();
         let mut o = String::new();
