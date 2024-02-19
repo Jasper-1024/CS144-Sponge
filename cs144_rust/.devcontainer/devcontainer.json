@@ -5,9 +5,9 @@
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	// "image": "mcr.microsoft.com/devcontainers/rust:0-1-bullseye", rust:slim-bookworm
 	"image": "mcr.microsoft.com/devcontainers/rust:latest",
-	"runArgs": [
-		"--network=host"
-	],
+	// "runArgs": [
+	// 	"--network=host"
+	// ],
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 	// Configure tool-specific properties.
