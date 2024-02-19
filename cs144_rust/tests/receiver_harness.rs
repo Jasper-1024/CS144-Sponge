@@ -4,7 +4,7 @@ use cs144_rust::{
     byte_stream::ByteStreamTrait,
     tcp_helpers::{
         tcp_header::TCPHeaderTrait,
-        tcp_segment:: TCPSegment,
+        tcp_segment::TCPSegment,
         tcp_state::{TCPReceiverStateSummary, TCPState},
     },
     tcp_receiver::{TCPReceiver, TCPReceiverTrait},
@@ -20,7 +20,11 @@ pub trait ReceiverTestStep {
     fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         todo!()
     }
-    fn execute_with_segment<'a>(&self, receiver: Rc<RefCell<TCPReceiver<'a>>>, seg: &'a TCPSegment) {
+    fn execute_with_segment<'a>(
+        &self,
+        receiver: Rc<RefCell<TCPReceiver<'a>>>,
+        seg: &'a TCPSegment,
+    ) {
         todo!()
     }
 }
@@ -393,7 +397,11 @@ impl ReceiverTestStep for SegmentArrives {
     //     }
     // }
 
-    fn execute_with_segment<'a>(&self, receiver: Rc<RefCell<TCPReceiver<'a>>>, seg: &'a TCPSegment) {
+    fn execute_with_segment<'a>(
+        &self,
+        receiver: Rc<RefCell<TCPReceiver<'a>>>,
+        seg: &'a TCPSegment,
+    ) {
         // let seg = self.build_segment();
         let mut o = String::new();
         o.push_str(&seg.header.summary());
@@ -442,7 +450,7 @@ impl<'a> TCPReceiverTestHarness<'a> {
         step.execute(self.receiver.clone());
     }
 
-    // pub fn execute_with_segment(&self, step: &'a dyn ReceiverTestStep, seg: &'a TCPSegment) {
-    //     step.execute_with_segment(self.receiver.clone(), seg);
-    // }
+    pub fn execute_with_segment(&self, step: &'a dyn ReceiverTestStep, seg: &'a TCPSegment) {
+        step.execute_with_segment(self.receiver.clone(), seg);
+    }
 }
