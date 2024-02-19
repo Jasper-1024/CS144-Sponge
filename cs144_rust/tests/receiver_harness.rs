@@ -100,6 +100,14 @@ pub struct ExpectAckno {
     ackno: Option<WrappingInt32>,
 }
 
+impl ExpectAckno {
+    pub fn new(ackno: u32) -> Self {
+        Self {
+            ackno: Some(WrappingInt32::new(ackno)),
+        }
+    }
+}
+
 impl ReceiverTestStep for ExpectAckno {
     fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         let receiver = receiver.borrow();
@@ -136,6 +144,12 @@ impl ReceiverTestStep for ExpectWindow {
 pub struct ExpectUnassembledBytes {
     n_bytes: usize,
 }
+impl ExpectUnassembledBytes {
+    pub fn new(n_bytes: usize) -> Self {
+        Self { n_bytes }
+    }
+}
+
 impl ReceiverTestStep for ExpectUnassembledBytes {
     fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         assert_eq!(
@@ -151,6 +165,12 @@ impl ReceiverTestStep for ExpectUnassembledBytes {
 // ExpectTotalAssembledBytes
 pub struct ExpectTotalAssembledBytes {
     n_bytes: usize,
+}
+
+impl ExpectTotalAssembledBytes {
+    pub fn new(n_bytes: usize) -> Self {
+        Self { n_bytes }
+    }
 }
 
 impl ReceiverTestStep for ExpectTotalAssembledBytes {

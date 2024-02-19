@@ -69,7 +69,7 @@ impl<'a> TCPReceiverTrait<'a> for TCPReceiver<'a> {
         let abs_ackno = self.reassembler.stream_out().borrow().bytes_written() + 1;
         let curr_abs_seqno = header.seqno.unwrap(self.isn, abs_ackno);
 
-        let stram_index = curr_abs_seqno - 1 + if header.syn { 1 } else { 0 };
+        let stram_index = curr_abs_seqno + if header.syn { 1 } else { 0 } - 1;
 
         self.reassembler
             .push_substring(seg.payload.as_ref(), stram_index, header.fin);
