@@ -361,8 +361,8 @@ impl SegmentArrivesBuilder {
         self
     }
 
-    pub fn data(mut self, data: Vec<u8>) -> Self {
-        self.data = data;
+    pub fn data<const N: usize>(mut self, data: [u8; N]) -> Self {
+        self.data = data.to_vec();
         self
     }
 
