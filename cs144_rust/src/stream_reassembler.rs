@@ -33,9 +33,15 @@ impl<'a> StreamReassemblerTrait<'a> for StreamReassembler<'a> {
         }
     }
     fn push_substring(&mut self, mut data: &'a [u8], mut index: u64, eof: bool) {
+        // in case single fin
+        if data.len() == 0 && eof {
+            self.eof_index = index;
+            self.bytes_stream.borrow_mut().end_input();
+        }
+
         if data.len() == 0 {
-            return; // data 为空
-        };
+            return;
+        }
         if index >= (self.assembled + self.capacity as u64) {
             return; // data.start 在 capacity 之后
         }
