@@ -83,7 +83,7 @@ impl ExpectState {
 
 impl ReceiverTestStep for ExpectState {
     fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
-        let mut receiver = receiver.borrow_mut();
+        let receiver = receiver.borrow_mut();
         // 解析状态与预期状态是否一致
         assert_eq!(
             TCPState::state_summary(&*receiver),
