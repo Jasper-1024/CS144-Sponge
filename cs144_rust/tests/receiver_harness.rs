@@ -195,7 +195,15 @@ impl ReceiverTestStep for ExpectTotalAssembledBytes {
 }
 
 // ExpectEof | receiver.stream_out().eof() == true
-pub struct ExpectEof;
+pub struct ExpectEof {
+    flag: bool,
+}
+
+impl ExpectEof {
+    pub fn new(flag: bool) -> Self {
+        Self { flag }
+    }
+}
 
 impl ReceiverTestStep for ExpectEof {
     fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
@@ -207,7 +215,15 @@ impl ReceiverTestStep for ExpectEof {
 }
 
 // ExpectInputNotEnded | receiver.stream_out().input_ended() == false
-pub struct ExpectInputNotEnded;
+pub struct ExpectInputNotEnded {
+    flag: bool,
+}
+
+impl ExpectInputNotEnded {
+    pub fn new(flag: bool) -> Self {
+        Self { flag }
+    }
+}
 
 impl ReceiverTestStep for ExpectInputNotEnded {
     fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
@@ -484,7 +500,8 @@ impl<'a> TCPReceiverTestHarness<'a> {
     }
 }
 
-#[macro_export] macro_rules! execute_test {
+#[macro_export]
+macro_rules! execute_test {
     ($test:expr, $step:ident, $value:expr) => {
         let step = $step::new($value);
         $test.execute(&step);
