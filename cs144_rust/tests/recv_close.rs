@@ -36,6 +36,7 @@ fn test_recv_close() {
         execute_test!(test, ExpectUnassembledBytes, 0);
         execute_test!(test, ExpectBytes, *b"");
         execute_test!(test, ExpectTotalAssembledBytes, 0);
+        execute_test!(test, ExpectState, TCPReceiverStateSummary::FinReceived);
     }
     {
         let isn: u32 = rng.gen_range(0..=std::u32::MAX);
