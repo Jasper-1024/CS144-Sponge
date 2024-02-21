@@ -23,7 +23,7 @@ fn test_recv_special() {
 
         execute_test!(test, ExpectState, TCPReceiverStateSummary::Listen);
         execute_test!(test, ExpectUnassembledBytes, 0);
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
         let mut seg_arrivers = SegmentArrivesBuilder::new()
@@ -56,7 +56,7 @@ fn test_recv_special() {
         execute_test!(test, ExpectState, TCPReceiverStateSummary::SynReceived);
         execute_test!(test, ExpectAckno, (isn + 14).into());
         execute_test!(test, ExpectUnassembledBytes, 0);
-        execute_test!(test, ExpectBytes, *b"Hello, CS144!");
+        execute_test!(test, ExpectBytes, b"Hello, CS144!".to_vec());
     }
 
     /* empty segment */
@@ -129,7 +129,7 @@ fn test_recv_special() {
         let default_segment = seg_arrivers.build_segment();
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
-        execute_test!(test, ExpectBytes, *text);
+        execute_test!(test, ExpectBytes, (*text).to_vec());
         execute_test!(test, ExpectAckno, (isn + 35).into());
         execute_test!(test, ExpectInputNotEnded, true);
     }
@@ -160,7 +160,7 @@ fn test_recv_special() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectState, TCPReceiverStateSummary::FinReceived);
-        execute_test!(test, ExpectBytes, *b"Goodbye, CS144!");
+        execute_test!(test, ExpectBytes, b"Goodbye, CS144!".to_vec());
         execute_test!(test, ExpectAckno, (isn + 17).into());
         execute_test!(test, ExpectEof, true);
     }
@@ -191,7 +191,7 @@ fn test_recv_special() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectState, TCPReceiverStateSummary::SynReceived);
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectAckno, (isn + 1).into());
         execute_test!(test, ExpectInputNotEnded, true);
 
@@ -204,7 +204,7 @@ fn test_recv_special() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectState, TCPReceiverStateSummary::FinReceived);
-        execute_test!(test, ExpectBytes, *b"Goodbye, CS144!");
+        execute_test!(test, ExpectBytes, b"Goodbye, CS144!".to_vec());
         execute_test!(test, ExpectAckno, (isn + 17).into());
         execute_test!(test, ExpectEof, true);
     }
@@ -228,7 +228,7 @@ fn test_recv_special() {
         execute_test!(test, ExpectState, TCPReceiverStateSummary::FinReceived);
         execute_test!(test, ExpectAckno, (isn + 27).into());
         execute_test!(test, ExpectUnassembledBytes, 0);
-        execute_test!(test, ExpectBytes, *b"Hello and goodbye, CS144!");
+        execute_test!(test, ExpectBytes, b"Hello and goodbye, CS144!".to_vec());
         execute_test!(test, ExpectEof, true);
     }
 }

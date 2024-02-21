@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, usize};
+use std::{cell::RefCell, rc::Rc, u8, usize};
 
 use cs144_rust::{
     byte_stream::ByteStreamTrait,
@@ -235,17 +235,17 @@ impl ReceiverTestStep for ExpectInputNotEnded {
 }
 
 // ExpectBytes
-pub struct ExpectBytes<const N: usize> {
-    bytes: [u8; N],
+pub struct ExpectBytes {
+    bytes: Vec<u8>,
 }
 
-impl<const N: usize> ExpectBytes<N> {
-    pub fn new(bytes: [u8; N]) -> Self {
-        Self { bytes }
+impl ExpectBytes {
+    pub fn new(data: Vec<u8>) -> Self {
+        Self { bytes: data }
     }
 }
 
-impl<const N: usize> ReceiverTestStep for ExpectBytes<N> {
+impl ReceiverTestStep for ExpectBytes {
     fn execute(&self, receiver: Rc<RefCell<TCPReceiver>>) {
         let binding = receiver.borrow().stream_out();
 
@@ -388,6 +388,11 @@ impl SegmentArrivesBuilder {
 
     pub fn data<const N: usize>(mut self, data: [u8; N]) -> Self {
         self.data = data.to_vec();
+        self
+    }
+
+    pub fn data_vec(mut self, data: Vec<u8>) -> Self {
+        self.data = data;
         self
     }
 

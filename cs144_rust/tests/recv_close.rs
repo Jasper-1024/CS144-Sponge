@@ -34,7 +34,7 @@ fn test_recv_close() {
 
         execute_test!(test, ExpectAckno, (isn + 2).into());
         execute_test!(test, ExpectUnassembledBytes, 0);
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectTotalAssembledBytes, 0);
         execute_test!(test, ExpectState, TCPReceiverStateSummary::FinReceived);
     }
@@ -66,7 +66,7 @@ fn test_recv_close() {
         execute_test!(test, ExpectState, TCPReceiverStateSummary::FinReceived);
         execute_test!(test, ExpectAckno, (isn + 3).into());
         execute_test!(test, ExpectUnassembledBytes, 0);
-        execute_test!(test, ExpectBytes, *b"a");
+        execute_test!(test, ExpectBytes, b"a".to_vec());
         execute_test!(test, ExpectTotalAssembledBytes, 1);
         execute_test!(test, ExpectState, TCPReceiverStateSummary::FinReceived);
     }

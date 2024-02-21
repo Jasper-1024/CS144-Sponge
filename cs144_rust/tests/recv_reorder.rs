@@ -28,7 +28,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 4);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
     }
@@ -57,7 +57,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 4);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -70,7 +70,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 9).into());
-        execute_test!(test, ExpectBytes, *b"abcdefgh");
+        execute_test!(test, ExpectBytes, b"abcdefgh".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 0);
         execute_test!(test, ExpectTotalAssembledBytes, 8);
     }
@@ -99,7 +99,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 4);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -112,7 +112,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 3).into());
-        execute_test!(test, ExpectBytes, *b"ab");
+        execute_test!(test, ExpectBytes, b"ab".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 4);
         execute_test!(test, ExpectTotalAssembledBytes, 2);
 
@@ -125,7 +125,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 9).into());
-        execute_test!(test, ExpectBytes, *b"cdefgh");
+        execute_test!(test, ExpectBytes, b"cdefgh".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 0);
         execute_test!(test, ExpectTotalAssembledBytes, 8);
     }
@@ -154,7 +154,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 1);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -167,7 +167,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 2);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -180,7 +180,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 3);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -193,7 +193,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 4).into());
-        execute_test!(test, ExpectBytes, *b"abc");
+        execute_test!(test, ExpectBytes, b"abc".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 2);
         execute_test!(test, ExpectTotalAssembledBytes, 3);
 
@@ -207,7 +207,7 @@ fn test_recv_reorder() {
 
         execute_test!(test, ExpectUnassembledBytes, 3);
         execute_test!(test, ExpectTotalAssembledBytes, 3);
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
 
         let mut seg_arrivers = SegmentArrivesBuilder::new()
             .seqno((isn + 4).into())
@@ -219,7 +219,7 @@ fn test_recv_reorder() {
 
         execute_test!(test, ExpectUnassembledBytes, 0);
         execute_test!(test, ExpectTotalAssembledBytes, 7);
-        execute_test!(test, ExpectBytes, *b"defg");
+        execute_test!(test, ExpectBytes, b"defg".to_vec());
     }
 
     // Many gaps, then subsumed
@@ -246,7 +246,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 1);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -259,7 +259,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 2);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -272,7 +272,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 1).into());
-        execute_test!(test, ExpectBytes, *b"");
+        execute_test!(test, ExpectBytes, b"".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 3);
         execute_test!(test, ExpectTotalAssembledBytes, 0);
 
@@ -285,7 +285,7 @@ fn test_recv_reorder() {
         test.execute_with_segment(&seg_arrivers, &default_segment);
 
         execute_test!(test, ExpectAckno, (isn + 9).into());
-        execute_test!(test, ExpectBytes, *b"abcdefgh");
+        execute_test!(test, ExpectBytes, b"abcdefgh".to_vec());
         execute_test!(test, ExpectUnassembledBytes, 0);
         execute_test!(test, ExpectTotalAssembledBytes, 8);
     }
