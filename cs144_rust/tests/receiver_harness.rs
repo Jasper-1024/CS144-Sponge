@@ -101,9 +101,12 @@ pub struct ExpectAckno {
 }
 
 impl ExpectAckno {
-    pub fn new(ackno: u32) -> Self {
-        Self {
-            ackno: Some(WrappingInt32::new(ackno)),
+    pub fn new(ackno: Option<u32>) -> Self {
+        match ackno {
+            Some(ackno) => Self {
+                ackno: Some(WrappingInt32::new(ackno)),
+            },
+            None => Self { ackno: None },
         }
     }
 }
@@ -125,6 +128,12 @@ impl ReceiverTestStep for ExpectAckno {
 // ExpectWindow
 pub struct ExpectWindow {
     window: usize,
+}
+
+impl ExpectWindow {
+    pub fn new(window: usize) -> Self {
+        Self { window }
+    }
 }
 
 impl ReceiverTestStep for ExpectWindow {
@@ -473,4 +482,11 @@ impl<'a> TCPReceiverTestHarness<'a> {
     pub fn execute_with_segment(&self, step: &'a dyn ReceiverTestStep, seg: &'a TCPSegment) {
         step.execute_with_segment(self.receiver.clone(), seg);
     }
+}
+
+#[macro_export] macro_rules! execute_test {
+    ($test:expr, $step:ident, $value:expr) => {
+        let step = $step::new($value);
+        $test.execute(&step);
+    };
 }
