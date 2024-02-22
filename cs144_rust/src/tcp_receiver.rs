@@ -69,6 +69,10 @@ impl<'a> TCPReceiverTrait<'a> for TCPReceiver<'a> {
         let abs_ackno = self.reassembler.stream_out().borrow().bytes_written() + 1;
         let curr_abs_seqno = header.seqno.unwrap(self.isn, abs_ackno);
 
+        // 如果 packet 使用的是重复 isn, stram_index 会是 -1.
+        if (curr_abs_seqno == 0) && (!header.syn) {
+            return;
+        }
         let stram_index = curr_abs_seqno + if header.syn { 1 } else { 0 } - 1;
 
         self.reassembler
