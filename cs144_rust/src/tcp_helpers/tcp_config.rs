@@ -1,0 +1,24 @@
+use crate::wrapping_integers::WrappingInt32;
+
+pub const DEFAULT_CAPACITY: usize = 64000; // 默认容量
+pub const MAX_PAYLOAD_SIZE: usize = 1452; // 适合在IPv4或UDP数据报中的最大TCP负载
+pub const TIMEOUT_DFLT: u16 = 1000; // 默认的重传超时时间为1秒
+pub const MAX_RETX_ATTEMPTS: u8 = 8; // 放弃之前的最大重传尝试次数
+
+pub struct TCPConfig {
+    rt_timeout: u16,                  // 重传超时的初始值，以毫秒为单位
+    recv_capacity: usize,             // 接收容量，以字节为单位
+    send_capacity: usize,             // 发送容量，以字节为单位
+    fixed_isn: Option<WrappingInt32>, // 可选的固定初始序列号
+}
+
+impl TCPConfig {
+    pub fn new() -> TCPConfig {
+        TCPConfig {
+            rt_timeout: TIMEOUT_DFLT,
+            recv_capacity: DEFAULT_CAPACITY,
+            send_capacity: DEFAULT_CAPACITY,
+            fixed_isn: None,
+        }
+    }
+}
