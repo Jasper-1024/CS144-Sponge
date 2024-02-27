@@ -86,10 +86,10 @@ impl ReceiverTestStep for ExpectState {
         let receiver = receiver.borrow_mut();
         // 解析状态与预期状态是否一致
         assert_eq!(
-            TCPState::state_summary(&*receiver),
+            TCPState::state_summary_receiver(&*receiver),
             self.state,
             "The TCPReceiver was in state `{}`, but it was expected to be in state `{}`",
-            TCPState::state_summary(&*receiver),
+            TCPState::state_summary_receiver(&*receiver),
             self.state
         );
     }
