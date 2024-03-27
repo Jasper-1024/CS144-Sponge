@@ -44,6 +44,15 @@ impl Default for TCPSegment {
     }
 }
 
+impl Clone for TCPSegment {
+    fn clone(&self) -> Self {
+        TCPSegment {
+            header: self.header.clone(),
+            payload: self.payload.clone(),
+        }
+    }
+}
+
 pub trait TCPSegmentTrait {
     fn parse(&mut self, p: &mut Buffer, datagram_layer_checksum: u32) -> Result<(), ParseError>; // Parse the segment from [u8]
     fn serialize(&mut self, datagram_layer_checksum: u32) -> Result<BufferList, &'static str>; // Serialize the segment to [u8]
