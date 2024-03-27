@@ -4,3 +4,4 @@ pub mod tcp_receiver;
 pub mod tcp_helpers;
 pub mod util;
 pub mod wrapping_integers;
+pub mod tcp_sender;
