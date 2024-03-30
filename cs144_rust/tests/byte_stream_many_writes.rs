@@ -25,7 +25,7 @@ fn many_writes() {
         assert_eq!(stream.buffer_empty(), false);
         assert_eq!(stream.eof(), false);
         assert_eq!(stream.bytes_read(), 0);
-        assert_eq!(stream.bytes_written(), acc);
+        assert_eq!(stream.bytes_written(), acc as u64);
         assert_eq!(stream.remaining_capacity(), CAPACITY - acc);
         assert_eq!(stream.buffer_size(), acc);
     }

@@ -27,10 +27,10 @@ impl<'a, 'b> ReassemblerTestHarness<'a> {
         let binding = self.stream_reassembler.stream_out();
         let byte_stream = binding.borrow_mut();
         let temp = byte_stream.bytes_written();
-        assert_eq!(temp, bytes);
+        assert_eq!(temp, bytes as u64);
 
         assert_eq!(
-            temp, bytes,
+            temp, bytes as u64,
             "The reassembler was expected to have `{}` total bytes assembled, but there were `{}`",
             bytes, temp
         );

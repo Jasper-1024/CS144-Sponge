@@ -44,7 +44,7 @@ fn test1() {
         let result = read(&buf);
         assert_eq!(
             buf.stream_out().borrow().bytes_written(),
-            offset,
+            offset as u64,
             "test 1 - number of bytes RX is incorrect"
         );
         assert_eq!(
@@ -71,7 +71,7 @@ fn test3() {
         let res1 = read(&buf);
         assert_eq!(
             buf.stream_out().borrow().bytes_written(),
-            size,
+            size as u64,
             "test 3 - number of RX bytes is incorrect"
         );
         assert_eq!(
@@ -86,7 +86,7 @@ fn test3() {
         let res2 = read(&buf);
         assert_eq!(
             buf.stream_out().borrow().bytes_written(),
-            size + 8,
+            size as u64 + 8,
             "test 3 - number of RX bytes is incorrect after 2nd read"
         );
         assert_eq!(
@@ -115,7 +115,7 @@ fn test4() {
         let res1 = read(&buf);
         assert_eq!(
             buf.stream_out().borrow().bytes_written(),
-            size,
+            size as u64,
             "test 4 - number of RX bytes is incorrect"
         );
         assert_eq!(
@@ -129,7 +129,7 @@ fn test4() {
         let res2 = read(&buf);
         let bytes_written = buf.stream_out().borrow().bytes_written();
         assert!(
-            bytes_written == 2 * size || bytes_written == size + 15,
+            bytes_written == 2 * size as u64 || bytes_written == size as u64 + 15,
             "test 4 - number of RX bytes is incorrect after 2nd read"
         );
         assert_eq!(

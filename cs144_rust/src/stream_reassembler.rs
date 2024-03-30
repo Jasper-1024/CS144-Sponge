@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
-use crate::byte_stream::{self, ByteStream, ByteStreamTrait};
+use crate::byte_stream::{ByteStream, ByteStreamTrait};
 
 pub struct StreamReassembler<'a> {
     pub(crate) capacity: usize, // The maximum number of bytes
