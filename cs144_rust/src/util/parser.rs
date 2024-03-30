@@ -197,4 +197,37 @@ mod tests {
         NetUnparser::u8(&mut buffer, u8::MIN);
         assert_eq!(buffer, vec![0x00]);
     }
+
+    // form cs144-2021 /doctest/parser_xx
+    #[test]
+    #[allow(unused)]
+    fn doctest() {
+        const val1: u32 = 0xdeadbeef;
+        const val2: u16 = 0xc0c0;
+        const val3: u8 = 0xff;
+        const val4: u32 = 0x0c05fefe;
+
+        let mut list: Vec<u8> = Vec::new();
+        list.push(0x32);
+        list.extend(val1.to_be_bytes());
+        list.extend(val2.to_be_bytes());
+        list.push(val3);
+        list.extend(val4.to_be_bytes());
+
+        let buffer = Buffer::new_form_vec(list);
+
+        let mut p = NetParser::new(buffer);
+
+        let out0 = p.u8().unwrap();
+        let out1 = p.u32().unwrap();
+        let out2 = p.u16().unwrap();
+        let out3 = p.u8().unwrap();
+        let out4 = p.u32().unwrap();
+
+        assert_eq!(out0, 0x32);
+        assert_eq!(out1, val1);
+        assert_eq!(out2, val2);
+        assert_eq!(out3, val3);
+        assert_eq!(out4, val4);
+    }
 }
