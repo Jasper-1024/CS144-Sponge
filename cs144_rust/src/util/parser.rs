@@ -61,7 +61,7 @@ impl NetParser {
         self.buffer.remove_prefix(n)?;
         Ok(())
     }
-
+    // Check that there is sufficient data to parse the next token
     fn check_size(&self, size: usize) -> Result<(), ParseError> {
         if self.buffer.len() < size {
             Err(ParseError::PacketTooShort)

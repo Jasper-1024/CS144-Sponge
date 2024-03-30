@@ -14,7 +14,7 @@ const RST_FLAG: u8 = 0b0000_0100;
 const SYN_FLAG: u8 = 0b0000_0010;
 const FIN_FLAG: u8 = 0b0000_0001;
 
-const TCP_HEADER_LENGTH: usize = 20;
+const TCP_HEADER_LENGTH: usize = 20; // 不包括可选字段 20 字节 (rfc793)
 /// \struct TCPHeader
 /// ~~~{.txt}
 ///   0                   1                   2                   3
@@ -44,7 +44,7 @@ pub struct TCPHeader {
     pub dport: u16,           // destination port
     pub seqno: WrappingInt32, // sequence number
     pub ackno: WrappingInt32, // ack number
-    pub doff: u8,             // data offset
+    pub doff: u8,             // data offset | 不包括可选字段时, TCP_HEADER_LENGTH / 4
     pub urg: bool,            // urgent flag
     pub ack: bool,            // ack flag
     pub psh: bool,            // push flag
@@ -63,7 +63,7 @@ impl Default for TCPHeader {
             dport: 0,
             seqno: WrappingInt32::new(0),
             ackno: WrappingInt32::new(0),
-            doff: 0,
+            doff: (TCP_HEADER_LENGTH / 4) as u8,
             urg: false,
             ack: false,
             psh: false,
