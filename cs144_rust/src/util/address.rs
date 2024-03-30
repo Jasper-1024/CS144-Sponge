@@ -176,4 +176,15 @@ mod tests {
         let address2 = Address::new("127.0.0.1", "8080").unwrap();
         assert_eq!(address1, address2);
     }
+    // test from /cs144-2021 /doctest/address_dt_xxx
+    #[test]
+    fn address_dt() {
+        // service not "https", to_socket_addrs not support.
+        let google_webserver = Address::new("www.google.com", "443").unwrap();
+        let a_dns_server = Address::new_ip_port("18.71.0.151", 53).unwrap();
+        let a_dns_server_numeric = a_dns_server.ipv4_numeric();
+
+        assert!(google_webserver.port() == 443);
+        assert!(a_dns_server_numeric == 0x12470097)
+    }
 }
