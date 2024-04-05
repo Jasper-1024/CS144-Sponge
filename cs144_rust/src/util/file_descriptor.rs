@@ -117,14 +117,14 @@ impl FileDescriptorTrait for FileDescriptor {
 
             match writev(fd, &iovecs) {
                 Ok(bytes_written) => {
-                    if bytes_written == 0 && buffer.len() != 0 {
+                    if bytes_written == 0 && buffer.total_size() != 0 {
                         return Err(io::Error::new(
                             io::ErrorKind::WriteZero,
                             "write returned 0 given non-empty input buffer",
                         ));
                     }
 
-                    if bytes_written > buffer.len() {
+                    if bytes_written > buffer.total_size() {
                         return Err(io::Error::new(
                             io::ErrorKind::InvalidData,
                             "write wrote more than length of input buffer",
