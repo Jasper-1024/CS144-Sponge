@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, io::IoSlice, rc::Rc};
+use std::{collections::VecDeque, io::IoSlice, ops::Deref, rc::Rc};
 
 // 引用计数的 只读 u8 数组
 #[derive(Clone, Debug, PartialEq)]
@@ -25,31 +25,22 @@ impl Buffer {
     /**
      * 返回u8切片, 有可能为空
      */
-    pub fn as_slice(&self) -> Option<&[u8]> {
-        if self.storage.is_empty() {
-            None
-        } else {
-            Some(&self.storage[self.starting_offset..])
-        }
+    pub fn as_slice(&self) -> &[u8] {
+        &self.storage[self.starting_offset..]
     }
 
     /**
      * 取 i 位置的字节(与 offset 无关), 有可能越过边界
      */
     pub fn at(&self, i: usize) -> Option<u8> {
-        let bytes = self.storage.as_ref();
-        if self.starting_offset + i < bytes.len() {
-            Some(bytes[i])
-        } else {
-            None
-        }
+        self.as_slice().get(i).copied()
     }
 
     /**
      * 返回 u8 数组 len, 无效返回 0
      */
     pub fn len(&self) -> usize {
-        self.as_slice().map_or(0, |slice| slice.len())
+        self.as_slice().len()
     }
 
     /**
@@ -82,7 +73,14 @@ impl Default for Buffer {
 // as_ref 方法返回一个 u8 数组的引用
 impl AsRef<[u8]> for Buffer {
     fn as_ref(&self) -> &[u8] {
-        self.as_slice().unwrap_or_default()
+        self.as_slice()
+    }
+}
+
+impl Deref for Buffer {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
     }
 }
 
@@ -132,7 +130,7 @@ impl BufferList {
     }
 
     // size... rust used len more often..
-    pub fn len(&self) -> usize {
+    pub fn total_size(&self) -> usize {
         self.buffers.iter().map(|b| b.len()).sum()
     }
 
@@ -143,10 +141,10 @@ impl BufferList {
     /**
      * to buffer
      */
-    pub fn to_buffer(&self) -> Result<Option<Buffer>, &'static str> {
+    pub fn to_buffer(&self) -> Result<Buffer, &'static str> {
         match self.buffers.len() {
-            0 => Ok(None),
-            1 => Ok(Some(self.buffers[0].clone())),
+            0 => Ok(Buffer::default()),
+            1 => Ok(self.buffers[0].clone()),
             _ => Err("BufferList: please use concatenate() to combine a multi-Buffer BufferList into one Buffer"),
         }
     }
@@ -172,19 +170,25 @@ impl BufferList {
         Ok(())
     }
 
-    /**
-     * make a copy of all buffers
-     */
-    pub fn concatenate(&self) -> Vec<u8> {
-        let mut result = Vec::new();
+    /// make a copy of all buffers
+    /// maybe expensive
+    pub fn concatenate(&self) -> Buffer {
+        let total_size = self.total_size();
+        let mut concatenated = Vec::with_capacity(total_size);
+
         for buffer in &self.buffers {
-            result.extend_from_slice(buffer.as_ref());
+            concatenated.extend_from_slice(&buffer.storage[buffer.starting_offset..]);
         }
-        result
+
+        Buffer {
+            storage: Rc::from(concatenated),
+            starting_offset: 0,
+        }
     }
 }
 
 // A non-owning temporary view of a discontiguous string
+#[derive(Default)]
 pub struct BufferViewList<'a> {
     views: VecDeque<&'a [u8]>,
 }
@@ -194,11 +198,7 @@ impl<'a> BufferViewList<'a> {
      * new BufferViewList from BufferList
      */
     pub fn new(buffers: &'a BufferList) -> Self {
-        let views = buffers
-            .buffers
-            .iter()
-            .map(|b| b.as_slice().unwrap_or_default())
-            .collect();
+        let views = buffers.buffers.iter().map(|b| b.as_slice()).collect();
         BufferViewList { views }
     }
 
@@ -219,7 +219,7 @@ impl<'a> BufferViewList<'a> {
     //     BufferViewList { views }
     // }
 
-    pub fn len(&self) -> usize {
+    pub fn total_size(&self) -> usize {
         self.views.iter().map(|v| v.len()).sum()
     }
 
@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn test_as_slice() {
         let buffer = Buffer::new([1, 2, 3, 4, 5]);
-        assert_eq!(buffer.as_slice(), Some(&[1, 2, 3, 4, 5][..]));
+        assert_eq!(buffer.as_slice(), &[1, 2, 3, 4, 5][..]);
     }
 
     #[test]
@@ -288,7 +288,7 @@ mod tests {
     fn test_remove_prefix() {
         let mut buffer = Buffer::new([1, 2, 3, 4, 5]);
         assert_eq!(buffer.remove_prefix(3), Ok(()));
-        assert_eq!(buffer.as_slice(), Some(&[4, 5][..]));
+        assert_eq!(buffer.as_slice(), &[4, 5][..]);
         assert_eq!(
             buffer.remove_prefix(3),
             Err("Buffer::remove_prefix n too large")
@@ -311,8 +311,8 @@ mod tests {
             buffers: VecDeque::from(vec![Buffer::new([4, 5, 6])]),
         };
         buffer_list1.append(&mut buffer_list2);
-        assert_eq!(buffer_list1.len(), 6);
-        assert_eq!(buffer_list2.len(), 0);
+        assert_eq!(buffer_list1.total_size(), 6);
+        assert_eq!(buffer_list2.total_size(), 0);
     }
 
     #[test]
@@ -320,7 +320,7 @@ mod tests {
         let buffer_list = BufferList {
             buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
         };
-        assert_eq!(buffer_list.len(), 6);
+        assert_eq!(buffer_list.total_size(), 6);
     }
 
     #[test]
@@ -336,10 +336,7 @@ mod tests {
         let buffer_list = BufferList {
             buffers: VecDeque::from(vec![Buffer::new([1, 2, 3])]),
         };
-        assert_eq!(
-            buffer_list.to_buffer().unwrap().unwrap().as_slice(),
-            Some(&[1, 2, 3][..])
-        );
+        assert_eq!(buffer_list.to_buffer().unwrap().as_slice(), &[1, 2, 3][..]);
     }
 
     #[test]
@@ -348,7 +345,7 @@ mod tests {
             buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
         };
         assert_eq!(buffer_list.remove_prefix(4), Ok(()));
-        assert_eq!(buffer_list.len(), 2);
+        assert_eq!(buffer_list.total_size(), 2);
         assert_eq!(
             buffer_list.remove_prefix(3),
             Err("BufferList::remove_prefix out of bounds")
@@ -361,7 +358,7 @@ mod tests {
             buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
         };
         let result = buffer_list.concatenate();
-        assert_eq!(result, [1, 2, 3, 4, 5, 6]);
+        assert_eq!(result.as_ref(), &[1, 2, 3, 4, 5, 6]);
     }
 
     // BufferViewList tests
@@ -371,21 +368,21 @@ mod tests {
             buffers: VecDeque::from(vec![Buffer::new([1, 2, 3]), Buffer::new([4, 5, 6])]),
         };
         let view_list = BufferViewList::new(&buffer_list);
-        assert_eq!(view_list.len(), 6);
+        assert_eq!(view_list.total_size(), 6);
     }
 
     #[test]
     fn test_new_from_slice() {
         let slice = &[1, 2, 3, 4, 5, 6];
         let view_list = BufferViewList::new_frome_slice(slice);
-        assert_eq!(view_list.len(), 6);
+        assert_eq!(view_list.total_size(), 6);
     }
 
     #[test]
     fn test_len_buffer_viewlist() {
         let slice = &[1, 2, 3, 4, 5, 6];
         let view_list = BufferViewList::new_frome_slice(slice);
-        assert_eq!(view_list.len(), 6);
+        assert_eq!(view_list.total_size(), 6);
     }
 
     #[test]
@@ -400,7 +397,7 @@ mod tests {
         let slice = &[1, 2, 3, 4, 5, 6];
         let mut view_list = BufferViewList::new_frome_slice(slice);
         assert_eq!(view_list.remove_prefix(3), Ok(()));
-        assert_eq!(view_list.len(), 3);
+        assert_eq!(view_list.total_size(), 3);
         assert_eq!(
             view_list.remove_prefix(4),
             Err("BufferViewList::remove_prefix out of bounds")
