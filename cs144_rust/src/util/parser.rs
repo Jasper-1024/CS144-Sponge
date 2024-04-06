@@ -1,7 +1,6 @@
-use std::vec;
-
 use super::buffer::Buffer;
 
+/// The result of parsing or unparsing an IP datagram, TCP segment, Ethernet frame, or ARP message
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum ParseError {
     // #[error("Success")] // rust 不需要这个,返回 ok
@@ -39,9 +38,7 @@ impl From<&'static str> for ParseError {
 macro_rules! parse_num {
     ($self:ident, $t:ty, $size:expr) => {{
         $self.check_size($size)?;
-        let bytes: [u8; $size] = $self.buffer.as_slice().unwrap_or_default()[..$size]
-            .try_into()
-            .unwrap();
+        let bytes: [u8; $size] = $self.buffer.as_slice()[..$size].try_into().unwrap();
         let _ = $self.remove_prefix($size);
         Ok(<$t>::from_be_bytes(bytes))
     }};
@@ -69,15 +66,15 @@ impl NetParser {
             Ok(())
         }
     }
-
+    /// Parse a 32-bit integer in network byte order from the data stream
     pub fn u32(&mut self) -> Result<u32, ParseError> {
         parse_num!(self, u32, 4)
     }
-
+    /// Parse a 16-bit integer in network byte order from the data stream
     pub fn u16(&mut self) -> Result<u16, ParseError> {
         parse_num!(self, u16, 2)
     }
-
+    /// Parse an 8-bit integer from the data stream
     pub fn u8(&mut self) -> Result<u8, ParseError> {
         parse_num!(self, u8, 1)
     }
@@ -90,14 +87,15 @@ impl NetParser {
 pub struct NetUnparser;
 
 impl NetUnparser {
+    /// Write a 32-bit integer into the data stream in network byte order
     pub fn u32(buffer: &mut Vec<u8>, num: u32) {
         buffer.extend_from_slice(&num.to_be_bytes());
     }
-
+    /// Write a 16-bit integer into the data stream in network byte order
     pub fn u16(buffer: &mut Vec<u8>, num: u16) {
         buffer.extend_from_slice(&num.to_be_bytes());
     }
-
+    /// Write an 8-bit integer into the data stream in network byte order
     pub fn u8(buffer: &mut Vec<u8>, num: u8) {
         buffer.push(num);
     }
@@ -120,10 +118,10 @@ mod tests {
         let mut parser = NetParser::new(Buffer::new(*b"test"));
 
         assert!(parser.remove_prefix(2).is_ok());
-        assert_eq!(parser.buffer.as_slice(), Some("st".as_bytes()));
+        assert_eq!(parser.buffer.as_slice(), "st".as_bytes());
 
         assert!(parser.remove_prefix(2).is_ok());
-        assert_eq!(parser.buffer.as_slice(), Some("".as_bytes()));
+        assert_eq!(parser.buffer.as_slice(), "".as_bytes());
 
         assert!(parser.remove_prefix(1).is_err());
     }
@@ -200,7 +198,7 @@ mod tests {
 
     // form cs144-2021 /doctest/parser_xx
     #[test]
-    #[allow(unused)]
+    #[allow(dead_code)]
     fn doctest() {
         const val1: u32 = 0xdeadbeef;
         const val2: u16 = 0xc0c0;
