@@ -28,12 +28,16 @@ impl RawAddr {
     fn as_mut_sockaddr_ptr(&mut self) -> *mut sockaddr {
         &mut self.storage as *mut _ as *mut sockaddr // first cast to (*mut _) and then to sockaddr
     }
+
+    fn size() -> socklen_t {
+        size_of::<sockaddr_storage>() as socklen_t
+    }
 }
 
 /// Address represents a wrapper around IPv4 addresses and DNS operations.
 pub struct Address {
     addr: RawAddr,
-    len: socklen_t,
+    pub(crate) len: socklen_t,
 }
 
 fn make_hints(ai_flags: i32, ai_family: i32) -> addrinfo {
@@ -154,6 +158,15 @@ impl std::fmt::Display for Address {
     }
 }
 
+impl Default for Address {
+    fn default() -> Self {
+        Address {
+            addr: RawAddr::new(),
+            len: RawAddr::size(), // size of sockaddr_storage
+        }
+    }
+}
+
 pub trait AddressTrait {
     // Dotted-quad IP address string ("18.243.0.1") and numeric port.
     fn ip_port(&self) -> Result<(String, u16), Box<dyn std::error::Error>>;
@@ -172,7 +185,8 @@ pub trait AddressTrait {
     // Size of the underlying address storage.
     fn size(&self) -> socklen_t;
     // Const pointer to the underlying socket address storage.
-    fn to_sock_addr(&self) -> &sockaddr;
+    fn to_sockaddr(&self) -> &sockaddr;
+    fn to_sockaddr_mut(&mut self) -> *mut sockaddr;
 }
 
 impl AddressTrait for Address {
@@ -231,8 +245,12 @@ impl AddressTrait for Address {
         self.len
     }
 
-    fn to_sock_addr(&self) -> &sockaddr {
+    fn to_sockaddr(&self) -> &sockaddr {
         unsafe { &*(self.addr.as_sockaddr_ptr() as *const sockaddr) }
+    }
+
+    fn to_sockaddr_mut(&mut self) -> *mut sockaddr {
+        self.addr.as_mut_sockaddr_ptr()
     }
 }
 
