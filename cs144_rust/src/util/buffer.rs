@@ -205,7 +205,7 @@ impl<'a> BufferViewList<'a> {
     /**
      * new BufferViewList from &[u8]
      */
-    pub fn new_frome_slice(s: &'a [u8]) -> Self {
+    pub fn new_from_slice(s: &'a [u8]) -> Self {
         let mut views = VecDeque::new();
         views.push_back(s);
         BufferViewList { views }
@@ -374,28 +374,28 @@ mod tests {
     #[test]
     fn test_new_from_slice() {
         let slice = &[1, 2, 3, 4, 5, 6];
-        let view_list = BufferViewList::new_frome_slice(slice);
+        let view_list = BufferViewList::new_from_slice(slice);
         assert_eq!(view_list.total_size(), 6);
     }
 
     #[test]
     fn test_len_buffer_viewlist() {
         let slice = &[1, 2, 3, 4, 5, 6];
-        let view_list = BufferViewList::new_frome_slice(slice);
+        let view_list = BufferViewList::new_from_slice(slice);
         assert_eq!(view_list.total_size(), 6);
     }
 
     #[test]
     fn test_is_empty() {
         let slice = &[];
-        let view_list = BufferViewList::new_frome_slice(slice);
+        let view_list = BufferViewList::new_from_slice(slice);
         assert!(view_list.is_empty());
     }
 
     #[test]
     fn test_remove_prefix_buffer_viewlist() {
         let slice = &[1, 2, 3, 4, 5, 6];
-        let mut view_list = BufferViewList::new_frome_slice(slice);
+        let mut view_list = BufferViewList::new_from_slice(slice);
         assert_eq!(view_list.remove_prefix(3), Ok(()));
         assert_eq!(view_list.total_size(), 3);
         assert_eq!(
@@ -407,7 +407,7 @@ mod tests {
     #[test]
     fn test_as_io_slices() {
         let slice = &[1, 2, 3, 4, 5, 6];
-        let view_list = BufferViewList::new_frome_slice(slice);
+        let view_list = BufferViewList::new_from_slice(slice);
         let io_slices = view_list.as_io_slices();
         assert_eq!(io_slices.len(), 1);
         assert_eq!(io_slices[0].len(), 6);
