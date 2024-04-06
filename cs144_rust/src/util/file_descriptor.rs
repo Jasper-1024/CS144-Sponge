@@ -4,7 +4,7 @@ use nix::sys::uio::writev;
 use nix::unistd::read;
 use std::cell::RefCell;
 use std::io::{self, ErrorKind};
-use std::os::fd::{AsFd, FromRawFd, OwnedFd};
+use std::os::fd::{AsFd, BorrowedFd, FromRawFd, OwnedFd};
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::rc::Rc;
 
@@ -13,14 +13,20 @@ use super::buffer::BufferViewList;
 // 共享FDWrapper，提供读写功能
 #[allow(unused)]
 #[derive(Clone)]
-pub(crate) struct FileDescriptor {
+pub struct FileDescriptor {
     internal_fd: Rc<RefCell<OwnedFd>>, // 单线程内部可变
     eof: bool,                         // Flag indicating whether FDWrapper::_fd is at EOF
 }
 
 #[allow(dead_code)]
 impl FileDescriptor {
-    pub(crate) fn new(fd: RawFd) -> io::Result<Self> {
+    pub(crate) fn new(fd: OwnedFd) -> io::Result<Self> {
+        Ok(Self {
+            internal_fd: Rc::new(RefCell::new(fd)),
+            eof: false,
+        })
+    }
+    pub(crate) fn new_from_rawfd(fd: RawFd) -> io::Result<Self> {
         Ok(Self {
             internal_fd: Rc::new(RefCell::new(unsafe { OwnedFd::from_raw_fd(fd) })),
             eof: false,
@@ -41,6 +47,12 @@ impl AsRawFd for FileDescriptor {
     }
 }
 
+// impl AsFd for FileDescriptor {
+//     fn as_fd(&self) -> BorrowedFd {
+//         self.internal_fd.borrow().as_fd()
+//     }
+// }
+
 pub trait FileDescriptorTrait {
     // Read up to `limit` bytes | 不定长度
     fn read(&mut self, limit: usize) -> io::Result<Vec<u8>>;
@@ -49,7 +61,7 @@ pub trait FileDescriptorTrait {
 
     // Write a string, possibly blocking until all is written
     fn write(&mut self, buffer: &[u8], write_all: bool) -> Result<usize, io::Error> {
-        Self::write_buffer(self, BufferViewList::new_frome_slice(buffer), write_all)
+        Self::write_buffer(self, BufferViewList::new_from_slice(buffer), write_all)
     }
     // Write a string, possibly blocking until all is written
     // fn write_string(&mut self, str: String, write_all: bool) -> Result<usize, io::Error> {
@@ -85,6 +97,7 @@ impl FileDescriptorTrait for FileDescriptor {
                 "read() read more than requested",
             ));
         }
+        buffer.truncate(bytes_read);
         Ok(buffer)
     }
 
@@ -181,7 +194,7 @@ mod tests {
         let file = File::open("/tmp/testfile").unwrap();
         // 获取文件的原始文件描述符并创建一个 FileDescriptor
         let fd = file.into_raw_fd();
-        let mut fd_wrapper = FileDescriptor::new(fd).unwrap();
+        let mut fd_wrapper = FileDescriptor::new_from_rawfd(fd).unwrap();
 
         // 读取文件的内容
         let content = fd_wrapper.read(13).unwrap();
@@ -200,7 +213,7 @@ mod tests {
 
         // 获取文件的原始文件描述符并创建一个 FileDescriptor
         let fd = file.into_raw_fd();
-        let mut fd_wrapper = FileDescriptor::new(fd).unwrap();
+        let mut fd_wrapper = FileDescriptor::new_from_rawfd(fd).unwrap();
 
         // 写入一些数据
         let bytes_written = fd_wrapper.write(b"Hello, world!", true).unwrap();
@@ -220,7 +233,7 @@ mod tests {
 
         // 获取文件的原始文件描述符并创建一个 FileDescriptor
         let fd = file.into_raw_fd();
-        let fd_wrapper = FileDescriptor::new(fd).unwrap();
+        let fd_wrapper = FileDescriptor::new_from_rawfd(fd).unwrap();
 
         // 设置文件描述符为非阻塞模式
         fd_wrapper.set_blocking(false).unwrap();
