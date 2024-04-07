@@ -5,6 +5,7 @@ pub const MAX_PAYLOAD_SIZE: usize = 1452; // 适合在IPv4或UDP数据报中的�
 pub const TIMEOUT_DFLT: u16 = 1000; // 默认的重传超时时间为 1 秒 1000ms
 pub const MAX_RETX_ATTEMPTS: u8 = 8; // 放弃之前的最大重传尝试次数
 
+/// Config for TCP sender and receiver
 #[allow(dead_code)]
 pub struct TCPConfig {
     rt_timeout: u16,                  // 重传超时的初始值，以毫秒为单位
@@ -24,6 +25,13 @@ impl TCPConfig {
     }
 }
 
+impl Default for TCPConfig {
+    fn default() -> Self {
+        TCPConfig::new()
+    }
+}
+
+/// Config for classes derived from FdAdapter
 #[allow(unused)]
 struct FdAdapterConfig {
     source: Address,      // source address and port
