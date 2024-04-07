@@ -225,7 +225,7 @@ fn test_tcp_parser() {
 
             let mut tcp_seg_copy2 = TCPSegment::default();
             let mut buffer_temp =
-                Buffer::new_form_vec(tcp_seg_copy.serialize(0).unwrap().concatenate());
+                Buffer::new_form_vec(tcp_seg_copy.serialize(0).unwrap().concatenate().to_vec());
             let res = tcp_seg_copy2.parse(&mut buffer_temp, 0);
 
             if res.is_err() {
