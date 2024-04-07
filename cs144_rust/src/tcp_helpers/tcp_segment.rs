@@ -8,6 +8,7 @@ use crate::{
     },
 };
 
+/// \brief [TCP](\ref rfc::rfc793) segment
 pub struct TCPSegment {
     pub header: TCPHeader,
     pub payload: Buffer, // a warp of Rc<[u8]>
@@ -17,22 +18,6 @@ impl TCPSegment {
     pub fn new(header: TCPHeader, payload: Buffer) -> Self {
         TCPSegment { header, payload }
     }
-
-    // pub fn get_payload(&self) -> &Buffer {
-    //     &self.payload
-    // }
-
-    // pub fn get_payload_mut(&mut self) -> &mut Buffer {
-    //     &mut self.payload
-    // }
-
-    // pub fn get_header(&self) -> &TCPHeader {
-    //     &self.header
-    // }
-
-    // pub fn get_header_mut(&mut self) -> &mut TCPHeader {
-    //     &mut self.header
-    // }
 }
 
 impl Default for TCPSegment {
@@ -54,13 +39,17 @@ impl Clone for TCPSegment {
 }
 
 pub trait TCPSegmentTrait {
-    fn parse(&mut self, p: &mut Buffer, datagram_layer_checksum: u32) -> Result<(), ParseError>; // Parse the segment from [u8]
-    fn serialize(&mut self, datagram_layer_checksum: u32) -> Result<BufferList, &'static str>; // Serialize the segment to [u8]
-                                                                                               // Segment's length in sequence space ,Equal to payload length plus one byte if SYN is set, plus one byte if FIN is set
+    /// Parse the segment from a [u8]
+    fn parse(&mut self, p: &mut Buffer, datagram_layer_checksum: u32) -> Result<(), ParseError>;
+    /// Serialize the segment to [u8]
+    fn serialize(&mut self, datagram_layer_checksum: u32) -> Result<BufferList, &'static str>;
+    /// Segment's length in sequence space, Equal to payload length plus one byte if SYN is set, plus one byte if FIN is set
     fn length_in_sequence_space(&self) -> usize;
 }
 
 impl TCPSegmentTrait for TCPSegment {
+    /// \param[in] buffer string/Buffer to be parsed
+    /// \param[in] datagram_layer_checksum pseudo-checksum from the lower-layer protocol
     fn parse(
         &mut self,
         buffer: &mut Buffer,
@@ -80,10 +69,10 @@ impl TCPSegmentTrait for TCPSegment {
 
         Ok(())
     }
-
+    /// \param[in] datagram_layer_checksum pseudo-checksum from the lower-layer protocol
     fn serialize(&mut self, datagram_layer_checksum: u32) -> Result<BufferList, &'static str> {
         self.header.cksum = 0;
-
+        // calculate checksum -- taken over entire segment
         let mut check = InternetChecksum::new(datagram_layer_checksum);
         check.add(self.header.serialize()?.as_ref());
         check.add(self.payload.as_ref());
@@ -148,21 +137,18 @@ mod tests {
         assert_eq!(segment.payload.len(), 20);
     }
 
-    // 这里测试还存在争议, 需要回顾
     #[test]
     fn test_parse() {
         let header = TCPHeader::default();
         let payload = Buffer::new([]);
         let mut segment = TCPSegment::new(header, payload);
 
-        let hex_string =
-            "01bbc574618e191f2f8506c85018002215a100001703030029d5dc1d06a79fd0e2cce3515aa38594e23c46a329f5de9e90ac98c8ceea35fd5f9e5f02e74fa666ed74";
+        let hex_string = "c5ad0050add67d7292c6e402501003fff9d60000"; // just l4
         let bytes = hex::decode(hex_string).expect("Decoding failed");
         let mut buffer = Buffer::new_form_vec(bytes.try_into().unwrap());
 
-        let a = segment.parse(&mut buffer, 0);
-
-        assert!(a.is_ok());
+        let a = segment.parse(&mut buffer, 0xf9d6); // must err
+        assert!(a.is_err());
     }
 
     // #[test]
