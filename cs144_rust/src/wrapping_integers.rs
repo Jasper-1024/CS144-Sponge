@@ -63,6 +63,12 @@ impl LowerHex for WrappingInt32 {
     }
 }
 
+impl Default for WrappingInt32 {
+    fn default() -> Self {
+        WrappingInt32(0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
