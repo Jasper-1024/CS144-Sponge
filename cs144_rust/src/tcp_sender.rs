@@ -68,7 +68,7 @@ impl Default for Timer {
 
 pub struct TCPSender {
     isn: WrappingInt32,
-    segments_out: VecDeque<TCPSegment>,
+    pub segments_out: VecDeque<TCPSegment>,
     _timeout: u64,
     stream: Rc<RefCell<ByteStream>>,
     next_seqno: u64,
@@ -83,7 +83,24 @@ pub struct TCPSender {
     _retrans_count: usize,
 }
 
-impl TCPSender {}
+impl TCPSender {
+    pub fn new(capacity: usize, retx_timeout: u64, fixed_isn: Option<WrappingInt32>) -> Self {
+        TCPSender {
+            isn: fixed_isn.unwrap_or(WrappingInt32::default()), //todo: check default
+            segments_out: VecDeque::new(),
+            _timeout: retx_timeout,
+            stream: Rc::new(RefCell::new(ByteStream::new(capacity))),
+            next_seqno: 0,
+            window_size: 0,
+            bytes_in_flight: 0,
+            set_syn: false,
+            set_fin: false,
+            _outstanding_seg: VecDeque::new(),
+            _timer: Timer::new(retx_timeout),
+            _retrans_count: 0,
+        }
+    }
+}
 
 pub trait TCPSenderTrait {
     fn fill_window(&mut self);
@@ -118,7 +135,7 @@ impl TCPSenderTrait for TCPSender {
         while self.bytes_in_flight() < self.window_size as usize {
             let mut seg = TCPSegment::default();
 
-            if self.set_syn {
+            if !self.set_syn {
                 // first segment, syn without payload(window_size = 1)
                 seg.header.syn = true;
                 self.set_syn = true;
@@ -244,6 +261,6 @@ impl TCPSenderTrait for TCPSender {
     }
 
     fn stream_in(&self) -> Rc<RefCell<ByteStream>> {
-        unimplemented!()
+        self.stream.clone()
     }
 }
