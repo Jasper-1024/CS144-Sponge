@@ -8,10 +8,10 @@ pub const MAX_RETX_ATTEMPTS: u8 = 8; // 放弃之前的最大重传尝试次数
 /// Config for TCP sender and receiver
 #[allow(dead_code)]
 pub struct TCPConfig {
-    rt_timeout: u16,                  // 重传超时的初始值，以毫秒为单位
-    recv_capacity: usize,             // 接收容量，以字节为单位
-    send_capacity: usize,             // 发送容量，以字节为单位
-    fixed_isn: Option<WrappingInt32>, // 可选的固定初始序列号
+    pub rt_timeout: u16,                  // 重传超时的初始值，以毫秒为单位
+    pub recv_capacity: usize,             // 接收容量，以字节为单位
+    pub send_capacity: usize,             // 发送容量，以字节为单位
+    pub fixed_isn: Option<WrappingInt32>, // 可选的固定初始序列号
 }
 
 impl TCPConfig {
