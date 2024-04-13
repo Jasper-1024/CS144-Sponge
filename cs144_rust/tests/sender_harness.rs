@@ -246,7 +246,13 @@ impl SenderTestStep for AckReceived {
     }
 }
 
-struct Close;
+pub struct Close;
+
+impl Close {
+    pub fn new(_: bool) -> Self {
+        Self {}
+    }
+}
 
 impl SenderTestStep for Close {
     fn to_string(&self) -> String {
@@ -490,10 +496,18 @@ impl TCPSenderTestHarness {
     }
 }
 
+// #[macro_export]
+// macro_rules! execute_test {
+//     ($test:expr, $step:ident, $value:expr) => {
+//         let step = $step::new($value);
+//         $test.execute(&step);
+//     };
+// }
+
 #[macro_export]
 macro_rules! execute_test {
-    ($test:expr, $step:ident, $value:expr) => {
-        let step = $step::new($value);
+    ($test:expr, $step:ident, $($value:expr),*) => {
+        let step = $step::new($($value),*);
         $test.execute(&step);
     };
 }
