@@ -41,9 +41,6 @@ impl Timer {
     fn tick(&mut self, ms_since_last_tick: u64) {
         if self.is_running {
             self.time_count += ms_since_last_tick;
-            if self.time_count >= self.time_out {
-                self.is_running = false;
-            }
         }
     }
 
@@ -153,7 +150,7 @@ impl TCPSenderTrait for TCPSender {
             seg.payload = Buffer::from(payload);
 
             // meet eof and seg still has space
-            if !self.set_syn
+            if !self.set_fin
                 && self.stream.borrow().eof()
                 && (self.bytes_in_flight + seg.length_in_sequence_space()
                     < self.window_size as usize)
@@ -228,9 +225,8 @@ impl TCPSenderTrait for TCPSender {
                 self._retrans_count += 1; // 累计重传 +1
                 self._timer.set_time_out(self._timer.get_time_out() * 2); // 重传超时时间翻倍
             }
+            self._timer.restart(); // 重启计时器
         }
-
-        self._timer.restart(); // 重启计时器
     }
 
     // only for ack
