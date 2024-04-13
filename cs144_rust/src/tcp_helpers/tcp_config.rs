@@ -3,7 +3,7 @@ use crate::{util::address::Address, wrapping_integers::WrappingInt32};
 pub const DEFAULT_CAPACITY: usize = 64000; // 默认容量
 pub const MAX_PAYLOAD_SIZE: usize = 1452; // 适合在IPv4或UDP数据报中的最大TCP负载
 pub const TIMEOUT_DFLT: u16 = 1000; // 默认的重传超时时间为 1 秒 1000ms
-pub const MAX_RETX_ATTEMPTS: u8 = 8; // 放弃之前的最大重传尝试次数
+pub const MAX_RETX_ATTEMPTS: usize = 8; // 放弃之前的最大重传尝试次数
 
 /// Config for TCP sender and receiver
 #[allow(dead_code)]
