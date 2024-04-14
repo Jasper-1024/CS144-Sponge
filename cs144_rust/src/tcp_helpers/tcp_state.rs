@@ -69,7 +69,141 @@ impl fmt::Display for TCPSenderStateSummary {
 /// use this class to compare the "official" states with Sponge's
 /// sender/receiver states and two variables that belong to the
 /// overarching TCPConnection object.
-pub struct TCPState {}
+pub struct TCPState {
+    sender: String,
+    receiver: String,
+    active: bool,                      // default is true
+    linger_after_streams_finish: bool, // default is false
+}
+
+// TCPState 的 内部枚举
+pub enum State {
+    Listen,      // Listening for a peer to connect = 0
+    SynRcvd,     // Got the peer's SYN
+    SynSent,     // Sent a SYN to initiate a connection
+    Established, // Three-way handshake complete
+    CloseWait,   // Remote side has sent a FIN, connection is half-open
+    LastAck,     // Local side sent a FIN from CLOSE_WAIT, waiting for ACK
+    FinWait1,    // Sent a FIN to the remote side, not yet ACK'd
+    FinWait2,    // Received an ACK for previously-sent FIN
+    Closing,     // Received a FIN just after we sent one
+    TimeWait,    // Both sides have sent FIN and ACK'd, waiting for 2 MSL
+    Closed,      // A connection that has terminated normally
+    Reset,       // A connection that terminated abnormally
+}
+
+impl PartialEq for TCPState {
+    fn eq(&self, other: &Self) -> bool {
+        self.sender == other.sender
+            && self.receiver == other.receiver
+            && self.active == other.active
+            && self.linger_after_streams_finish == other.linger_after_streams_finish
+    }
+}
+
+// lab4 add
+impl TCPState {
+    /// brief Summarize the TCPState in a string
+    pub fn name(&self) -> String {
+        format!(
+            "sender=`{}`, receiver=`{}`, active={}, linger_after_streams_finish={}",
+            self.sender, self.receiver, self.active, self.linger_after_streams_finish
+        )
+    }
+    /// Construct a TCPState given a sender, a receiver, and the TCPConnection's active and linger bits
+    pub fn new(sender: &TCPSender, receiver: &TCPReceiver, active: bool, linger: bool) -> Self {
+        TCPState {
+            sender: TCPState::state_summary_sender(sender).to_string(),
+            receiver: TCPState::state_summary_receiver(receiver).to_string(),
+            active: active,
+            linger_after_streams_finish: linger,
+        }
+    }
+    /// Construct a TCPState that corresponds to one of the "official" TCP state names
+    pub fn new_from(state: State) -> Self {
+        let (receiver, sender, linger_after_streams_finish, active) = match state {
+            State::Listen => (
+                TCPReceiverStateSummary::Listen,
+                TCPSenderStateSummary::Closed,
+                true,
+                true,
+            ),
+            State::SynRcvd => (
+                TCPReceiverStateSummary::SynReceived,
+                TCPSenderStateSummary::SynSent,
+                true,
+                true,
+            ),
+            State::SynSent => (
+                TCPReceiverStateSummary::Listen,
+                TCPSenderStateSummary::SynSent,
+                true,
+                true,
+            ),
+            State::Established => (
+                TCPReceiverStateSummary::SynReceived,
+                TCPSenderStateSummary::SynAcked,
+                true,
+                true,
+            ),
+            State::CloseWait => (
+                TCPReceiverStateSummary::FinReceived,
+                TCPSenderStateSummary::SynAcked,
+                false,
+                true,
+            ),
+            State::LastAck => (
+                TCPReceiverStateSummary::FinReceived,
+                TCPSenderStateSummary::FinSent,
+                false,
+                true,
+            ),
+            State::Closing => (
+                TCPReceiverStateSummary::FinReceived,
+                TCPSenderStateSummary::FinSent,
+                true,
+                true,
+            ),
+            State::FinWait1 => (
+                TCPReceiverStateSummary::SynReceived,
+                TCPSenderStateSummary::FinSent,
+                true,
+                true,
+            ),
+            State::FinWait2 => (
+                TCPReceiverStateSummary::SynReceived,
+                TCPSenderStateSummary::FinAcked,
+                true,
+                true,
+            ),
+            State::TimeWait => (
+                TCPReceiverStateSummary::FinReceived,
+                TCPSenderStateSummary::FinAcked,
+                true,
+                true,
+            ),
+            State::Reset => (
+                TCPReceiverStateSummary::Error,
+                TCPSenderStateSummary::Error,
+                false,
+                false,
+            ),
+            State::Closed => (
+                TCPReceiverStateSummary::FinReceived,
+                TCPSenderStateSummary::FinAcked,
+                false,
+                false,
+            ),
+        };
+
+        TCPState {
+            sender: sender.to_string(),
+            receiver: receiver.to_string(),
+            linger_after_streams_finish,
+            active,
+        }
+    }
+}
 
 impl TCPState {
     /// \brief Summarize the state of a TCPReceiver in a string
