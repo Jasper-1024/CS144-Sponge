@@ -438,7 +438,7 @@ impl SenderTestStep for ExpectSegment {
         assert_eq_flags!(seg.header.win, self.win, "win");
         assert_eq_flags!(seg.payload.len(), self.payload_size, "payload_size");
         assert!(
-            seg.payload.len() < MAX_PAYLOAD_SIZE,
+            seg.payload.len() <= MAX_PAYLOAD_SIZE,
             "packet has length {} which is greater than the maximum payload size of {}",
             seg.payload.len(),
             MAX_PAYLOAD_SIZE
