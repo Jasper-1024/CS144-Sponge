@@ -88,7 +88,7 @@ impl TCPSender {
             _timeout: retx_timeout,
             stream: Rc::new(RefCell::new(ByteStream::new(capacity))),
             next_seqno: 0,
-            window_size: 0,
+            window_size: 1,
             bytes_in_flight: 0,
             set_syn: false,
             set_fin: false,
