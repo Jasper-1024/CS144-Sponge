@@ -127,9 +127,9 @@ pub trait TCPSenderTrait {
 
 impl TCPSenderTrait for TCPSender {
     fn fill_window(&mut self) {
-        self.window_size = std::cmp::max(self.window_size, 1); // make sure window_size is at least 1
+        let window_size = std::cmp::max(self.window_size, 1); // make sure window_size is at least 1
 
-        while self.bytes_in_flight() < self.window_size as usize {
+        while self.bytes_in_flight() < window_size as usize {
             let mut seg = TCPSegment::default();
 
             if !self.set_syn {
@@ -138,8 +138,9 @@ impl TCPSenderTrait for TCPSender {
                 self.set_syn = true;
             }
 
-            let a =
-                self.window_size as usize - self.bytes_in_flight - if self.set_syn { 1 } else { 0 };
+            let a = window_size as usize
+                - self.bytes_in_flight
+                - if seg.header.syn { 1 } else { 0 };
 
             let payload_size = std::cmp::min(
                 MAX_PAYLOAD_SIZE,
@@ -153,7 +154,7 @@ impl TCPSenderTrait for TCPSender {
             if !self.set_fin
                 && self.stream.borrow().eof()
                 && (self.bytes_in_flight + seg.length_in_sequence_space()
-                    < self.window_size as usize)
+                    < window_size as usize)
             {
                 seg.header.fin = true;
                 self.set_fin = true;
