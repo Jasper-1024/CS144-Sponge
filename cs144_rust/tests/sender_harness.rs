@@ -422,7 +422,7 @@ impl SenderTestStep for ExpectSegment {
             "The Sender should have produced a segment that existed, but it did not",
         );
 
-        let seg = segments.pop_back();
+        let seg = segments.pop_front();
         assert!(
             seg.is_some(),
             "The seg should have produced a segment that existed, but it did not",
