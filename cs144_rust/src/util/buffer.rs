@@ -111,6 +111,11 @@ impl BufferList {
             buffers: VecDeque::new(),
         }
     }
+    pub fn new_from_buffer(buffer: Buffer) -> Self {
+        let mut buffers = VecDeque::new();
+        buffers.push_back(buffer);
+        BufferList { buffers }
+    }
     /**
      * 这里会有所有权的转移.
      */
