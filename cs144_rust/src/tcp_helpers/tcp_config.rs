@@ -34,11 +34,11 @@ impl Default for TCPConfig {
 
 /// Config for classes derived from FdAdapter
 #[allow(unused)]
-struct FdAdapterConfig {
-    source: Address,      // source address and port
-    destination: Address, // destination address and port
-    loss_rate_dn: u16,    // loss rate for downlink (for LossyFdAdapter)
-    loss_rate_up: u16,    // loss rate for uplink (for LossyFdAdapter)
+pub struct FdAdapterConfig {
+    pub source: Address,      // source address and port
+    pub destination: Address, // destination address and port
+    pub loss_rate_dn: u16,    // loss rate for downlink (for LossyFdAdapter)
+    pub loss_rate_up: u16,    // loss rate for uplink (for LossyFdAdapter)
 }
 
 impl Default for FdAdapterConfig {

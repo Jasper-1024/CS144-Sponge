@@ -272,7 +272,7 @@ impl DerefMut for UDPSocket {
     }
 }
 
-trait UDPSocketTrait {
+pub trait UDPSocketTrait {
     /// Receive a datagram and the Address of its sender
     /// Here is just a simple wrapper (Address, Vec<u8>)
     fn recv(&self, mtu: usize) -> io::Result<(Address, Vec<u8>)>;
